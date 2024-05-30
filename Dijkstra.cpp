@@ -16,9 +16,9 @@ std::vector<double> dijkstra(const Graph &graph, int source)
 
     std::vector<double> distances(numVertices, std::numeric_limits<double>::max());  //We initialize distances to all vertices as infinite
 
-    std::vector<std::vector<vwPair>> adjacencyList = graph.getAdjacencyList();    //Adjacency list from the graph
+    std::vector<std::vector<vwPair> > adjacencyList = graph.getAdjacencyList();    //Adjacency list from the graph
 
-    std::priorityQueue<vwPair> priorityQueue; //Priority queue to hold the vertices to be explored
+    std::priority_queue<vwPair> priorityQueue; //Priority queue to hold the vertices to be explored
 
     // Start with the source vertex
     distances[source] = 0.0;
@@ -27,15 +27,16 @@ std::vector<double> dijkstra(const Graph &graph, int source)
     // Start the Dijkstra algorithm
     while (!priorityQueue.empty())
     {
+
         // Get the vertex with the smallest distance
         int u = priorityQueue.top().second;
         priorityQueue.pop();
 
         // Iterate through all the neighboring vertices of u
-        for (const auto &edge : adjacencyList[u])
+        for (std::vector<vwPair>::iterator it = adjacencyList[u].begin(); it != adjacencyList[u].end(); ++it)
         {
-            int v = edge.first;
-            double weight = edge.second;
+            int v = it->first;
+            double weight = it->second;
 
             // Calculate the possible alternative distance to vertex v through u
             double altDistance = distances[u] + weight;
@@ -52,3 +53,6 @@ std::vector<double> dijkstra(const Graph &graph, int source)
     return distances;
 }
 
+main(){
+    
+}
