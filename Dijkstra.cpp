@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "graph.h"
+#include "dijkstra.h"
 
 // Dijkstra algorithm 
 std::vector<double> dijkstra(const Graph &graph, int source)
@@ -18,7 +19,7 @@ std::vector<double> dijkstra(const Graph &graph, int source)
 
     std::vector<std::vector<vwPair>> adjacencyList = graph.getAdjacencyList();    //Adjacency list from the graph
 
-    std::priorityQueue<vwPair> priorityQueue; //Priority queue to hold the vertices to be explored
+    std::priority_queue<vwPair, std::vector<vwPair>, std::greater<vwPair>> priorityQueue; //Priority queue to hold the vertices to be explored
 
     // Start with the source vertex
     distances[source] = 0.0;
@@ -51,4 +52,9 @@ std::vector<double> dijkstra(const Graph &graph, int source)
 
     return distances;
 }
+//To check for compilation errors
+// int main() {
+//     std::cout << "Hello, World!" << std::endl;
+//     return 0;
+// }
 
