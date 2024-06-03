@@ -2,7 +2,7 @@
 #include <limits>
 #include <stdexcept>
 
-#include "graph.h"
+#include "dijkstra.h"	
 
 // Dijkstra algorithm 
 std::vector<double> dijkstra(const Graph &graph, int source)
@@ -51,8 +51,4 @@ std::vector<double> dijkstra(const Graph &graph, int source)
     }
 
     return distances;
-}
-
-main(){
-    
 }

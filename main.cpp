@@ -1,15 +1,16 @@
-#include "graph.h"
-#include "dijkstra.h"
 #include <iostream>
-#include <vector>
-#include <limits>
+#include "delta_stepping.h"
 #include <algorithm>
+#include "dijkstra.h"
+#include "graph.h"
 
+// Function to compare distances
 bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
     return distances.size() == expected.size() && std::equal(distances.begin(), distances.end(), expected.begin());
 }
 
-void testDijkstra() {
+// Function to test correctness
+void testCorrectness() {
     int passedTests = 0;
 
     // Test case 1: Simple graph with 5 vertices
@@ -58,7 +59,35 @@ void testDijkstra() {
     std::cout << "Number of test cases passed: " << passedTests << "/3" << std::endl;
 }
 
+// Function to test Delta-Stepping algorithm
+void testDeltaStepping() {
+    Graph g(5);
+    g.addEdge(0, 1, 10);
+    g.addEdge(0, 3, 5);
+    g.addEdge(1, 2, 1);
+    g.addEdge(3, 1, 3);
+    g.addEdge(3, 4, 2);
+    g.addEdge(4, 2, 9);
+    g.addEdge(4, 0, 7);
+
+    double delta = 3.0;
+    std::vector<double> distances = deltaStepping(g, 0, delta);
+
+    for (int i = 0; i < distances.size(); ++i) {
+        if (distances[i] == std::numeric_limits<double>::max()) {
+            std::cout << "Vertex " << i << " is unreachable" << std::endl;
+        } else {
+            std::cout << "Distance to vertex " << i << " is " << distances[i] << std::endl;
+        }
+    }
+}
+
 int main() {
-    testDijkstra();
+    std::cout << "Testing correctness of Dijkstra's algorithm:" << std::endl;
+    testCorrectness();
+
+    std::cout << "Testing Delta-Stepping algorithm:" << std::endl;
+    testDeltaStepping();
+
     return 0;
 }
