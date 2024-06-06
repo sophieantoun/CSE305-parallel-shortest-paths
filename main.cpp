@@ -1,8 +1,8 @@
-#include <iostream>
-#include "delta_stepping.h"
-#include <algorithm>
-#include "dijkstra.h"
-#include "graph.h"
+// #include <iostream>
+// #include "delta_stepping.h"
+// #include <algorithm>
+// #include "dijkstra.h"
+// #include "graph.h"
 
 // // Function to compare distances
 // bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
@@ -104,6 +104,9 @@
 
 #include "graph.h"
 #include "dijkstra.h"
+#include "delta_stepping.h"
+#include "delta_stepping_parallel.h"
+
 
 typedef std::pair<int, int> Edge; // (vertex, weight)
 const int INF = std::numeric_limits<int>::max();
@@ -219,53 +222,64 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
 
 int main(int argc, char *argv[]) {
 
-    if (argc < 2) {
+      if (argc < 4) {
         std::cout << "Usage: " << argv[0]
                   << " <N: number of nodes in input graph> "
-                  << " <path to input graph file:>"
-                  << " <algorithm to use: [dijkstra, deltastepping]> "
+                  << " <path to input graph file or type [random, grid]> "
+                  << " <algorithm to use: [dijkstra, deltastepping, paralleldeltastepping]> "
                   << " <optional: delta for deltastepping algorithm: [float]> " << std::endl;
         return 1;
     }
 
     // Parse command-line arguments
     int numVertices = std::stoi(argv[1]);
-    std::string graphFile = argv[2];
+    std::string graphSource = argv[2];
     std::string algorithm = argv[3];
+    double delta = argc > 4 ? std::stod(argv[4]) : 1.0; // Default delta
 
     Graph graph(numVertices);
-    if (graphFile == "random") {
-        graph = createRandomGraph(numVertices, 150); // We can modify number of edges as needed
-    } else if (graphFile == "grid") {
-        graph = createGridGraph(numVertices, 0.7); // Modify edge probability as needed
+    if (graphSource == "random") {
+        graph = createRandomGraph(numVertices, numVertices * 5); // Adjust edges as needed
+    } else if (graphSource == "grid") {
+        graph = createGridGraph(numVertices, 0.5); // Modify edge probability as needed
     } else {
-        graph = loadGraphFromFile(numVertices, graphFile);
+        graph = loadGraphFromFile(numVertices, graphSource);
     }
 
-    std::vector<double> dijkstraDistances;
+    std::vector<double> distances;
 
-    // Execute the specified algorithm
-    std::cout << "Input graph has " << numVertices << " nodes and " << graph.getNumEdges() << " edges" << std::endl;
+    // Measure execution time for the specified algorithm
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     if (algorithm == "dijkstra") {
-        // Measure execution time for Dijkstra's algorithm
-        auto startTime = std::chrono::high_resolution_clock::now();
+        distances = dijkstra(graph, 0);
+    } else if (algorithm == "deltastepping") {
+        distances = deltaStepping(graph, 0, delta);
+    } else if (algorithm == "paralleldeltastepping") {
+        distances = deltaSteppingParallel(graph, 0, delta);
+    } else {
+        std::cerr << "Unsupported algorithm. Use dijkstra, deltastepping, or paralleldeltastepping." << std::endl;
+        return 1;
+    }
 
-        dijkstraDistances = dijkstra(graph, 0);
-        
-        auto endTime = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
-        std::cout << "Dijkstra's algorithm took " << duration << " µs." << std::endl;
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    std::cout << algorithm << " took " << duration << " ms." << std::endl;
 
-        if(numVertices < 20) {
-            std::cout << "Vertex\tDistance from Source" << std::endl;
-            for (int i = 0; i < graph.getNumVertices(); ++i) {
-                std::cout << i << "\t" << dijkstraDistances[i] << std::endl;
-            }
+    // Optional: output the distances
+    if(numVertices <= 20) {
+        std::cout << "Vertex\tDistance from Source" << std::endl;
+        for (int i = 0; i < numVertices; ++i) {
+            std::cout << i << "\t" << distances[i] << std::endl;
         }
+    }
 
-        std::ofstream outFile("output_dijkstra.txt");
-        for (const auto &dist : dijkstraDistances) outFile << dist << "\n";
+    // Save results to a file
+    std::ofstream outFile("output_" + algorithm + ".txt");
+    for (const auto& dist : distances) {
+        outFile << dist << "\n";
     }
 
     return 0;
 }
+
