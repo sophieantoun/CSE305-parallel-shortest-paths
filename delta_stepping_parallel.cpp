@@ -1,58 +1,81 @@
 #include "delta_stepping_parallel.h"
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <limits>
+#include <cmath>
+#include <atomic>
+#include <algorithm>
 
-std::vector<double> deltaSteppingParallel(const Graph& graph, int source, double delta) {
+std::vector<double> deltaSteppingParallel(const Graph& graph, int source, double delta, int numThreads) {
     int numVertices = graph.getNumVertices();
-    std::vector<double> distances(numVertices, std::numeric_limits<double>::max());
-    std::vector<std::vector<int>> buckets(numVertices + 1);  // Use vector of vectors for better random access
+    std::vector<std::atomic<double>> distances(numVertices);
+    for (int i = 0; i < numVertices; ++i) {
+        distances[i] = std::numeric_limits<double>::max();
+    }
     distances[source] = 0.0;
+
+    std::vector<std::vector<int>> buckets(numVertices + 1);
     buckets[0].push_back(source);
 
     std::vector<std::vector<vwPair>> adjacencyList = graph.getAdjacencyList();
 
-    int currentBucket = 0;
-
-    while (currentBucket <= numVertices) {
+    for (int currentBucket = 0; currentBucket <= numVertices; ++currentBucket) {
         if (!buckets[currentBucket].empty()) {
-            // Parallel processing of each vertex in the current bucket
-            #pragma omp parallel
-            {
-                std::vector<int> localLightEdges;
-                std::vector<int> localHeavyEdges;
+            std::vector<std::thread> threads;
+            std::vector<std::vector<int>> localBuckets(numThreads, std::vector<int>());
 
-                #pragma omp for nowait // Distribute vertices to threads
-                for (int idx = 0; idx < buckets[currentBucket].size(); ++idx) {
+            // Define thread function within loop to capture local scope variables
+            auto processBucket = [&](int startIdx, int endIdx, int threadIndex) {
+                for (int idx = startIdx; idx < endIdx; ++idx) {
                     int u = buckets[currentBucket][idx];
                     for (const auto& edge : adjacencyList[u]) {
                         int v = edge.first;
                         double weight = edge.second;
-
                         double newDist = distances[u] + weight;
 
-                        // Critical section to update shared resources
-                        #pragma omp critical
-                        {
-                            if (newDist < distances[v]) {
-                                distances[v] = newDist;
-                                if (weight <= delta) {
-                                    localLightEdges.push_back(v);
-                                } else {
-                                    localHeavyEdges.push_back(v);
-                                }
+                        while (true) {
+                            double oldDist = distances[v].load(std::memory_order_relaxed);
+                            if (newDist >= oldDist || distances[v].compare_exchange_weak(oldDist, newDist, std::memory_order_relaxed)) {
+                                break;
                             }
                         }
+
+                        int bucketIndex = static_cast<int>(newDist / delta);
+                        if (bucketIndex > numVertices) bucketIndex = numVertices;
+                        localBuckets[threadIndex].push_back(v);
                     }
                 }
+            };
 
-                // Merge local lists into global lists safely
-                #pragma omp critical
-                {
-                    for (int v : localLightEdges) buckets[static_cast<int>(distances[v] / delta)].push_back(v);
-                    for (int v : localHeavyEdges) buckets[static_cast<int>(distances[v] / delta)].push_back(v);
+            // Divide work among threads
+            int bucketSize = buckets[currentBucket].size();
+            int chunkSize = (bucketSize + numThreads - 1) / numThreads;
+            for (int i = 0; i < numThreads; ++i) {
+                int startIdx = i * chunkSize;
+                int endIdx = std::min(startIdx + chunkSize, bucketSize);
+                threads.emplace_back(processBucket, startIdx, endIdx, i);
+            }
+
+            // Join threads
+            for (auto& thread : threads) {
+                thread.join();
+            }
+
+            // Merge thread-local buckets into global buckets
+            for (int i = 0; i < numThreads; ++i) {
+                for (int j = 0; j <= numVertices; ++j) {
+                    buckets[j].insert(buckets[j].end(), localBuckets[i].begin(), localBuckets[i].end());
                 }
             }
         }
-        ++currentBucket;
     }
 
-    return distances;
+    // Convert atomic<double> to double
+    std::vector<double> finalDistances(numVertices);
+    for (int i = 0; i < numVertices; ++i) {
+        finalDistances[i] = distances[i].load();
+    }
+
+    return finalDistances;
 }
