@@ -1,41 +1,38 @@
 #ifndef DELTASTEPPINGSEQUENTIAL_H
 #define DELTASTEPPINGSEQUENTIAL_H
 
-#include "graph.h"
-#include "Edge.h"
 #include <vector>
 #include <set>
 #include <limits>
 #include <cmath>
 #include <iostream>
+#include "graph.h"
 
 class DeltaSteppingSequential {
 public:
-    DeltaSteppingSequential(const Graph& graph, const int source, const bool is_verbose);
-    void solve();
-    void solveLightHeavy();
+    DeltaSteppingSequential(const Graph& graph, const int source, const double delta, const bool debug = false);
+
+    void run();
     void printSolution() const;
+    const std::vector<double>& getDistances() const;
 
 private:
-    const Graph& graph_;
-    int source_;
-    double delta_;
-    bool is_verbose_;
+    void classifyEdges();
+    void collectEdgesFromBucket(const std::set<int>& bucket, std::vector<Edge>& lightEdges, std::vector<Edge>& heavyEdges);
+    void relaxEdges(std::vector<Edge>& edges);
+    void printEdges() const;
+    void printBuckets() const;
 
-    std::vector<double> dist_;
-    std::vector<int> pred_;
-    std::vector<std::vector<int>> light_edges_;
-    std::vector<std::vector<int>> heavy_edges_;
-    std::vector<std::set<int>> buckets_;
-    int bucket_counter_ = 0;
-
-    void computeLightAndHeavyEdges();
-    void findBucketRequests(const std::set<int>& bucket, std::vector<Edge>* light_requests, std::vector<Edge>* heavy_requests);
-    void relax(const Edge& selected_edge);
-    void resolveRequests(std::vector<Edge>* requests);
-    void printLightAndHeavyEdges() const;
-    void printAllBuckets() const;
-    void printBucket(size_t bucket_id) const;
+    const Graph& graph;
+    int source;
+    bool debug;
+    double delta;
+    std::vector<double> distances;
+    std::vector<int> predecessors;
+    std::vector<std::vector<int>> lightEdges;
+    std::vector<std::vector<int>> heavyEdges;
+    std::vector<std::set<int>> buckets;
+    int bucketIndex;
 };
 
 #endif // DELTASTEPPINGSEQUENTIAL_H

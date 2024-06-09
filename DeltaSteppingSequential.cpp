@@ -1,178 +1,162 @@
 #include "DeltaSteppingSequential.h"
 
-DeltaSteppingSequential::DeltaSteppingSequential(const Graph& graph, const int source, const bool is_verbose)
-    : graph_(graph), source_(source), is_verbose_(is_verbose) {
-    
-    delta_ = 1.0 / (static_cast<double>(graph_.getMaxDegree()) + 1);
-    dist_.resize(graph_.getNumVertices(), std::numeric_limits<double>::infinity());
-    pred_.resize(graph_.getNumVertices(), -1);
+DeltaSteppingSequential::DeltaSteppingSequential(const Graph& graph, const int source, const double delta, const bool debug)
+    : graph(graph), source(source), debug(debug), delta(delta),
+      distances(graph.getNumVertices(), std::numeric_limits<double>::infinity()), 
+      predecessors(graph.getNumVertices(), -1), 
+      lightEdges(graph.getNumVertices()), 
+      heavyEdges(graph.getNumVertices()), 
+      buckets(static_cast<int>(graph.getNumVertices() / delta) + 1), 
+      bucketIndex(0) 
+{
+    classifyEdges();
 
-    light_edges_.resize(graph_.getNumVertices());
-    heavy_edges_.resize(graph_.getNumVertices());
+    if (debug)
+        std::cout << "Number of buckets: " << buckets.size() << std::endl;
 
-    computeLightAndHeavyEdges();
-
-    int bucket_size = static_cast<int>(graph_.getNumVertices() / delta_) + 1;
-    buckets_.resize(bucket_size);
-
-    if (is_verbose_) {
-        std::cout << "Bucket size: " << bucket_size << std::endl;
+    for (int i = 0; i < graph.getNumVertices(); ++i) {
+        if (i != source)
+            buckets.back().insert(i);
     }
 
-    for (int i = 0; i < graph_.getNumVertices(); i++) {
-        if (i != source_) {
-            buckets_[bucket_size - 1].insert(i);
-        }
-    }
+    // Initialize source bucket
+    buckets[0].insert(source);
+    distances[source] = 0;
+    predecessors[source] = source;
 
-    buckets_[0].insert(source_);
-    dist_[source_] = 0;
-    pred_[source_] = source_;
-
-    if (is_verbose_) {
-        printLightAndHeavyEdges();
-        printAllBuckets();
+    if (debug) {
+        printEdges();
+        printBuckets();
     }
 }
 
-void DeltaSteppingSequential::computeLightAndHeavyEdges() {
-    for (const Edge& edge : graph_.getEdges()) {
-        if (edge.getWeight() <= delta_) {
-            light_edges_[edge.getFrom()].push_back(edge.getTo());
+void DeltaSteppingSequential::classifyEdges()
+{
+    for (const Edge& edge : graph.getEdges()) {
+        if (edge.getWeight() <= delta) {
+            lightEdges[edge.getFrom()].push_back(edge.getTo());
         } else {
-            heavy_edges_[edge.getFrom()].push_back(edge.getTo());
+            heavyEdges[edge.getFrom()].push_back(edge.getTo());
         }
     }
 }
 
-void DeltaSteppingSequential::findBucketRequests(const std::set<int>& bucket, std::vector<Edge>* light_requests, std::vector<Edge>* heavy_requests) {
-    for (int vertex_id : bucket) {
-        buckets_[bucket_counter_].erase(vertex_id);
-        if (is_verbose_) {
-            std::cout << "Erased " << vertex_id << " from bucket " << bucket_counter_ << std::endl;
-            printBucket(bucket_counter_);
+void DeltaSteppingSequential::collectEdgesFromBucket(const std::set<int>& bucket, std::vector<Edge>& lightEdges, std::vector<Edge>& heavyEdges)
+{
+    for (int vertex : bucket) {
+        buckets[bucketIndex].erase(vertex);
+        if (debug) {
+            std::cout << "Removed " << vertex << " from bucket " << bucketIndex << std::endl;
+            std::cout << "Bucket [" << bucketIndex << "], size " << buckets[bucketIndex].size() << ": ";
+            for (int v : buckets[bucketIndex]) {
+                std::cout << v << " ";
+            }
+            std::cout << std::endl;
         }
 
-        for (int l_edge_vertex_id : light_edges_[vertex_id]) {
-            light_requests->emplace_back(vertex_id, l_edge_vertex_id, graph_.getEdgeWeight(vertex_id, l_edge_vertex_id));
+        for (int lightEdge : this->lightEdges[vertex]) {
+            lightEdges.emplace_back(vertex, lightEdge, graph.getEdgeWeight(vertex, lightEdge));
         }
 
-        for (int h_edge_vertex_id : heavy_edges_[vertex_id]) {
-            heavy_requests->emplace_back(vertex_id, h_edge_vertex_id, graph_.getEdgeWeight(vertex_id, h_edge_vertex_id));
+        for (int heavyEdge : this->heavyEdges[vertex]) {
+            heavyEdges.emplace_back(vertex, heavyEdge, graph.getEdgeWeight(vertex, heavyEdge));
         }
     }
 }
 
-void DeltaSteppingSequential::relax(const Edge& selected_edge) {
-    int from_vertex = selected_edge.getFrom();
-    int to_vertex = selected_edge.getTo();
-    double edge_weight = selected_edge.getWeight();
-    double tentative_dist = dist_[from_vertex] + edge_weight;
+void DeltaSteppingSequential::relaxEdges(std::vector<Edge>& edges)
+{
+    for (const Edge& edge : edges) {
+        int fromVertex = edge.getFrom();
+        int toVertex = edge.getTo();
+        double weight = edge.getWeight();
+        double newDistance = distances[fromVertex] + weight;
 
-    if (tentative_dist < dist_[to_vertex]) {
-        int i = static_cast<int>(std::floor(dist_[to_vertex] / delta_));
-        int j = static_cast<int>(std::floor(tentative_dist / delta_));
+        if (newDistance < distances[toVertex]) {
+            int oldBucketIndex = static_cast<int>(std::floor(distances[toVertex] / delta));
+            int newBucketIndex = static_cast<int>(std::floor(newDistance / delta));
 
-        if (i < buckets_.size() && i >= 0) {
-            buckets_[i].erase(to_vertex);
-        }
-        if (j < buckets_.size() && j >= 0) {
-            buckets_[j].insert(to_vertex);
-        }
-
-        dist_[to_vertex] = tentative_dist;
-        pred_[to_vertex] = from_vertex;
-    }
-}
-
-void DeltaSteppingSequential::resolveRequests(std::vector<Edge>* requests) {
-    for (const Edge& request : *requests) {
-        relax(request);
-    }
-}
-
-void DeltaSteppingSequential::solve() {
-    while (bucket_counter_ < buckets_.size()) {
-        std::set<int> current_bucket = buckets_[bucket_counter_];
-        while (!current_bucket.empty()) {
-            std::set<int> current_bucket_update;
-
-            for (int vertex_id : current_bucket) {
-                for (int neighbor_vertex : light_edges_[vertex_id]) {
-                    relax(Edge(vertex_id, neighbor_vertex, graph_.getEdgeWeight(vertex_id, neighbor_vertex)));
-                    current_bucket_update.insert(neighbor_vertex);
-                }
+            if (oldBucketIndex < buckets.size() && oldBucketIndex >= 0) {
+                buckets[oldBucketIndex].erase(toVertex);
+            }
+            if (newBucketIndex < buckets.size() && newBucketIndex >= 0) {
+                buckets[newBucketIndex].insert(toVertex);
             }
 
-            current_bucket = current_bucket_update;
-        }
-        bucket_counter_++;
-        while (bucket_counter_ < buckets_.size() && buckets_[bucket_counter_].empty()) {
-            bucket_counter_++;
-        }
-    }
-}
+            distances[toVertex] = newDistance;
+            predecessors[toVertex] = fromVertex;
 
-void DeltaSteppingSequential::solveLightHeavy() {
-    while (bucket_counter_ < buckets_.size()) {
-        std::vector<Edge> light_requests, heavy_requests;
-        std::set<int> current_bucket = buckets_[bucket_counter_];
-        while (!current_bucket.empty()) {
-            findBucketRequests(current_bucket, &light_requests, &heavy_requests);
-
-            resolveRequests(&light_requests);
-            light_requests.clear();
-
-            current_bucket = buckets_[bucket_counter_];
-        }
-
-        resolveRequests(&heavy_requests);
-        heavy_requests.clear();
-
-        bucket_counter_++;
-        while (bucket_counter_ < buckets_.size() && buckets_[bucket_counter_].empty()) {
-            bucket_counter_++;
+            if (debug) {
+                std::cout << "Relaxed edge (" << fromVertex << " -> " << toVertex << ") with new distance " << newDistance << std::endl;
+            }
         }
     }
 }
 
-void DeltaSteppingSequential::printSolution() const {
-    std::cout << "Solution: " << std::endl;
-    for (int i = 0; i < graph_.getNumVertices(); i++) {
-        std::cout << "Vertex " << i << ": " << dist_[i] << std::endl;
+void DeltaSteppingSequential::run()
+{
+    while (bucketIndex < buckets.size()) {
+        std::vector<Edge> lightRequests, heavyRequests;
+        std::set<int> currentBucket = buckets[bucketIndex];
+        if (debug) {
+            std::cout << "Processing bucket " << bucketIndex << ", size " << currentBucket.size() << std::endl;
+        }
+        while (!currentBucket.empty()) {
+            collectEdgesFromBucket(currentBucket, lightRequests, heavyRequests);
+            relaxEdges(lightRequests);
+            lightRequests.clear();
+            currentBucket = buckets[bucketIndex];
+        }
+        relaxEdges(heavyRequests);
+        heavyRequests.clear();
+        buckets[bucketIndex].clear(); // Clear the processed bucket
+        bucketIndex++;
+        while (bucketIndex < buckets.size() && buckets[bucketIndex].empty()) {
+            bucketIndex++;
+        }
     }
 }
 
-void DeltaSteppingSequential::printLightAndHeavyEdges() const {
-    std::cout << "Light edges: " << std::endl;
-    for (int i = 0; i < graph_.getNumVertices(); i++) {
+void DeltaSteppingSequential::printSolution() const
+{
+    std::cout << "Distances from source:" << std::endl;
+    for (int i = 0; i < graph.getNumVertices(); ++i) {
+        std::cout << "Vertex " << i << ": " << distances[i] << std::endl;
+    }
+}
+
+void DeltaSteppingSequential::printEdges() const
+{
+    std::cout << "Light edges:" << std::endl;
+    for (int i = 0; i < graph.getNumVertices(); ++i) {
         std::cout << "Vertex " << i << ": ";
-        for (int light_edge : light_edges_[i]) {
-            std::cout << light_edge << " ";
+        for (int lightEdge : lightEdges[i]) {
+            std::cout << lightEdge << " ";
         }
         std::cout << std::endl;
     }
 
-    std::cout << "Heavy edges: " << std::endl;
-    for (int i = 0; i < graph_.getNumVertices(); i++) {
+    std::cout << "Heavy edges:" << std::endl;
+    for (int i = 0; i < graph.getNumVertices(); ++i) {
         std::cout << "Vertex " << i << ": ";
-        for (int heavy_edge : heavy_edges_[i]) {
-            std::cout << heavy_edge << " ";
+        for (int heavyEdge : heavyEdges[i]) {
+            std::cout << heavyEdge << " ";
         }
         std::cout << std::endl;
     }
 }
 
-void DeltaSteppingSequential::printAllBuckets() const {
-    for (size_t bucket_id = 0; bucket_id < buckets_.size(); bucket_id++) {
-        printBucket(bucket_id);
+void DeltaSteppingSequential::printBuckets() const
+{
+    for (size_t bucketId = 0; bucketId < buckets.size(); ++bucketId) {
+        std::cout << "Bucket [" << bucketId << "], size " << buckets[bucketId].size() << ": ";
+        for (int vertex : buckets[bucketId]) {
+            std::cout << vertex << " ";
+        }
+        std::cout << std::endl;
     }
 }
 
-void DeltaSteppingSequential::printBucket(size_t bucket_id) const {
-    std::cout << "Bucket [" << bucket_id << "], size " << buckets_[bucket_id].size() << ": ";
-    for (int bucket_item : buckets_[bucket_id]) {
-        std::cout << bucket_item << " ";
-    }
-    std::cout << std::endl;
+const std::vector<double>& DeltaSteppingSequential::getDistances() const {
+    return distances;
 }
