@@ -204,15 +204,14 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
     return graph;
 }
 
-
 int main(int argc, char *argv[]) {
-
-      if (argc < 4) {
+    if (argc < 4) {
         std::cout << "Usage: " << argv[0]
                   << " <N: number of nodes in input graph> "
                   << " <path to input graph file or type [random, grid]> "
                   << " <algorithm to use: [dijkstra, deltastepping, paralleldeltastepping]> "
-                  << " <optional: delta for deltastepping algorithm: [float]> " << std::endl;
+                  << " <optional: delta for deltastepping algorithm: [float]> "
+                  << " <optional: number of threads for paralleldeltastepping algorithm: [int]>" << std::endl;
         return 1;
     }
 
@@ -221,6 +220,7 @@ int main(int argc, char *argv[]) {
     std::string graphSource = argv[2];
     std::string algorithm = argv[3];
     double delta = argc > 4 ? std::stod(argv[4]) : 1.0; // Default delta
+    int numThreads = argc > 5 ? std::stoi(argv[5]) : 4; // Default number of threads
 
     Graph graph(numVertices);
     if (graphSource == "random") {
@@ -239,12 +239,12 @@ int main(int argc, char *argv[]) {
     if (algorithm == "dijkstra") {
         std::cout << "Running Dijkstra's algorithm" << std::endl;
         distances = dijkstra(graph, 0);
-    } else if (algorithm == "deltastepping") {
-        std::cout << "Running Delta-Stepping algorithm" << std::endl;
-        distances = deltaStepping(graph, 0, delta);
-    } else if (algorithm == "paralleldeltastepping") {
-        std::cout << "Running Parallel Delta-Stepping algorithm" << std::endl;
-        distances = deltaSteppingParallel(graph, 0, delta);
+    // } else if (algorithm == "deltastepping") {
+    //     std::cout << "Running Delta-Stepping algorithm" << std::endl;
+    //     distances = DeltaSteppingSequential(graph, 0, delta);
+    // } else if (algorithm == "paralleldeltastepping") {
+    //     std::cout << "Running Parallel Delta-Stepping algorithm" << std::endl;
+    //     distances = deltaSteppingParallel(graph, 0, delta, numThreads);
     } else {
         std::cerr << "Unsupported algorithm. Use dijkstra, deltastepping, or paralleldeltastepping." << std::endl;
         return 1;

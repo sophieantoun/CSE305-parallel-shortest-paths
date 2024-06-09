@@ -38,4 +38,8 @@ private:
     void printBucket(size_t bucket_id) const;
 };
 
+// Add this function declaration
+std::vector<double> deltaStepping(const Graph& graph, int source, double delta);
+
+
 #endif // DELTASTEPPINGSEQUENTIAL_H
