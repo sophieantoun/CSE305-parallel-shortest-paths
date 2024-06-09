@@ -17,99 +17,79 @@
 #include "dijkstra.h"
 #include "DeltaSteppingSequential.h"
 #include "delta_stepping_parallel.h"
+#include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
+#include "/Users/sca/opt/anaconda3/include/omp.h"
 
+
+// bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
+//     return distances.size() == expected.size() && std::equal(distances.begin(), distances.end(), expected.begin());
+// }
+
+// // Function to test correctness
+// void testCorrectness() {
+//     int passedTests = 0;
+//     double delta = 3.0; // Delta for Delta-Stepping
+
+//     // Test case 1: Simple graph with 5 vertices
+//     Graph g1(5);
+//     g1.addEdge(0, 1, 10);
+//     g1.addEdge(0, 3, 5);
+//     g1.addEdge(1, 2, 1);
+//     g1.addEdge(3, 1, 3);
+//     g1.addEdge(3, 4, 2);
+//     g1.addEdge(4, 2, 9);
+//     g1.addEdge(4, 0, 7);
+
+//     std::vector<double> distances1D = dijkstra(g1, 0);
+//     std::vector<double> distances1DS = deltaStepping(g1, 0, delta);
+
+//     std::vector<double> expected1 = {0, 8, 9, 5, 7};
+//     if (compareDistances(distances1D, expected1) && compareDistances(distances1DS, expected1)) {
+//         ++passedTests;
+//     }
+    
+//     // Test case 2: Graph with negative weights (shouldn't be used with Dijkstra, but to see behavior)
+//     Graph g2(4);
+//     g2.addEdge(0, 1, 2);
+//     g2.addEdge(1, 2, -5); // Negative weight
+//     g2.addEdge(2, 3, 1);
+//     g2.addEdge(3, 0, 3);
+
+//     std::vector<double> distances2D = dijkstra(g2, 0);
+//     std::vector<double> distances2DS = deltaStepping(g2, 0, delta);
+
+//     std::vector<double> expected2 = {0, 2, -3, -2}; // Expected outcome may not be reliable due to negative weights
+//     if (compareDistances(distances2D, expected2) && compareDistances(distances2DS, expected2)) {
+//         ++passedTests;
+//     }
+    
+//     // Test case 3: Disconnected graph
+//     Graph g3(6);
+//     g3.addEdge(0, 1, 4);
+//     g3.addEdge(1, 2, 6);
+//     g3.addEdge(2, 0, 5);
+//     // Components 3, 4, 5 are disconnected from 0, 1, 2
+
+//     std::vector<double> distances3D = dijkstra(g3, 0);
+//     std::vector<double> distances3DS = deltaStepping(g3, 0, delta);
+
+//     std::vector<double> expected3 = {0, 4, 10, std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+//     if (compareDistances(distances3D, expected3) && compareDistances(distances3DS, expected3)) {
+//         ++passedTests;
+//     }
+
+//     std::cout << "Number of test cases passed: " << passedTests << "/3" << std::endl;
+// }
 
 // int main() {
-//     Graph graph(6);
-
-//     // Add edges
-//     graph.addEdge(0, 1, 50);
-//     graph.addEdge(0, 2, 50);
-//     graph.addEdge(1, 3, 40);
-//     graph.addEdge(2, 4, 70);
-//     graph.addEdge(3, 5, 70);
-//     graph.addEdge(4, 5, 40);
-
-//     // Create DeltaSteppingSequential object with delta value
-//     DeltaSteppingSequential deltaStepping(graph, 0, true);
-
-//     // Compute shortest paths
-//     deltaStepping.solveLightHeavy();
-
-//     // Print solution
-//     deltaStepping.printSolution();
-
+//     std::cout << "Testing correctness of Dijkstra's and Delta-Stepping algorithms:" << std::endl;
+//     testCorrectness();
 //     return 0;
 // }
-bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
-    return distances.size() == expected.size() && std::equal(distances.begin(), distances.end(), expected.begin());
-}
-
-// Function to test correctness
-void testCorrectness() {
-    int passedTests = 0;
-    double delta = 3.0; // Delta for Delta-Stepping
-
-    // Test case 1: Simple graph with 5 vertices
-    Graph g1(5);
-    g1.addEdge(0, 1, 10);
-    g1.addEdge(0, 3, 5);
-    g1.addEdge(1, 2, 1);
-    g1.addEdge(3, 1, 3);
-    g1.addEdge(3, 4, 2);
-    g1.addEdge(4, 2, 9);
-    g1.addEdge(4, 0, 7);
-
-    std::vector<double> distances1D = dijkstra(g1, 0);
-    std::vector<double> distances1DS = deltaStepping(g1, 0, delta);
-
-    std::vector<double> expected1 = {0, 8, 9, 5, 7};
-    if (compareDistances(distances1D, expected1) && compareDistances(distances1DS, expected1)) {
-        ++passedTests;
-    }
-    
-    // Test case 2: Graph with negative weights (shouldn't be used with Dijkstra, but to see behavior)
-    Graph g2(4);
-    g2.addEdge(0, 1, 2);
-    g2.addEdge(1, 2, -5); // Negative weight
-    g2.addEdge(2, 3, 1);
-    g2.addEdge(3, 0, 3);
-
-    std::vector<double> distances2D = dijkstra(g2, 0);
-    std::vector<double> distances2DS = deltaStepping(g2, 0, delta);
-
-    std::vector<double> expected2 = {0, 2, -3, -2}; // Expected outcome may not be reliable due to negative weights
-    if (compareDistances(distances2D, expected2) && compareDistances(distances2DS, expected2)) {
-        ++passedTests;
-    }
-    
-    // Test case 3: Disconnected graph
-    Graph g3(6);
-    g3.addEdge(0, 1, 4);
-    g3.addEdge(1, 2, 6);
-    g3.addEdge(2, 0, 5);
-    // Components 3, 4, 5 are disconnected from 0, 1, 2
-
-    std::vector<double> distances3D = dijkstra(g3, 0);
-    std::vector<double> distances3DS = deltaStepping(g3, 0, delta);
-
-    std::vector<double> expected3 = {0, 4, 10, std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
-    if (compareDistances(distances3D, expected3) && compareDistances(distances3DS, expected3)) {
-        ++passedTests;
-    }
-
-    std::cout << "Number of test cases passed: " << passedTests << "/3" << std::endl;
-}
-
-int main() {
-    std::cout << "Testing correctness of Dijkstra's and Delta-Stepping algorithms:" << std::endl;
-    testCorrectness();
-    return 0;
-}
 
 
 
-typedef std::pair<int, int> Edge; // (vertex, weight)
+typedef std::pair<int, int> MinMaxEdge; // (vertex, weight
 const int INF = std::numeric_limits<int>::max();
 
 // Function to generate a random graph
@@ -126,7 +106,8 @@ Graph createRandomGraph(int numVertices, int numEdges) {
 }
 
 // Function to find the smallest and largest edge weights
-Edge findMinMaxEdgeWeights(const std::vector<std::vector<vwPair>>& adjList, int numVertices) {
+MinMaxEdge findMinMaxEdgeWeights(const std::vector<std::vector<vwPair>>& adjList, int numVertices) {
+    std::cout << "Finding min and max edge weights" << std::endl;
     int minWeight = INF;
     int maxWeight = -INF;
     for (int i = 0; i < numVertices; ++i) {
@@ -143,8 +124,10 @@ Edge findMinMaxEdgeWeights(const std::vector<std::vector<vwPair>>& adjList, int 
     return std::make_pair(minWeight, maxWeight);
 }
 
+
 // Function to generate a grid graph
 Graph createGridGraph(int gridSize, double edgeProbability) {
+    std::cout << "Creating grid graph with size " << gridSize << " and edge probability " << edgeProbability << std::endl;
     Graph graph(gridSize);
     double weight;
     double probability;
@@ -198,9 +181,10 @@ Graph createGridGraph(int gridSize, double edgeProbability) {
 
 // Function to parse a graph from a file
 Graph loadGraphFromFile(int numVertices, const std::string& filename) {
+    std::cout << "Loading graph from file: " << filename << std::endl;
     std::ifstream file(filename);
     if (!file) {
-        std::cerr << "Error: Failed to open the file." << std::endl;
+        std::cerr << "Error: Failed to open the file: " << filename << std::endl;
         exit(1);
     }
     Graph graph(numVertices);
@@ -209,6 +193,7 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
         std::istringstream iss(line);
         int u, v;
         double weight;
+        std::cout << "Reading edge: " << line << std::endl; // Debug line
         if (iss >> u >> v >> weight) {
             graph.addEdge(u, v, weight);
         } else {
@@ -218,7 +203,6 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
     file.close();
     return graph;
 }
-
 
 
 int main(int argc, char *argv[]) {
@@ -253,11 +237,14 @@ int main(int argc, char *argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     if (algorithm == "dijkstra") {
+        std::cout << "Running Dijkstra's algorithm" << std::endl;
         distances = dijkstra(graph, 0);
     } else if (algorithm == "deltastepping") {
+        std::cout << "Running Delta-Stepping algorithm" << std::endl;
         distances = deltaStepping(graph, 0, delta);
     } else if (algorithm == "paralleldeltastepping") {
-        distances = deltaSteppingParallel(graph, 0, delta, 2);
+        std::cout << "Running Parallel Delta-Stepping algorithm" << std::endl;
+        distances = deltaSteppingParallel(graph, 0, delta);
     } else {
         std::cerr << "Unsupported algorithm. Use dijkstra, deltastepping, or paralleldeltastepping." << std::endl;
         return 1;
