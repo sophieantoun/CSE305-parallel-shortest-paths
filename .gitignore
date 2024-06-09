@@ -50,4 +50,5 @@ Thumbs.db
 # Dependency directories #
 ##########################
 node_modules/
-vendor/
+vendor/<my_key>
+<my_key.pub>
