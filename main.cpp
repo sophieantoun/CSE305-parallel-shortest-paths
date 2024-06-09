@@ -1,8 +1,3 @@
-// #include <iostream>
-// #include "delta_stepping.h"
-// #include <algorithm>
-// #include "dijkstra.h"
-// #include "graph.h"
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -16,9 +11,9 @@
 #include "graph.h"
 #include "dijkstra.h"
 #include "DeltaSteppingSequential.h"
-#include "delta_stepping_parallel.h"
-#include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
-#include "/Users/sca/opt/anaconda3/include/omp.h"
+#include "DeltaSteppingParallel.h"
+// #include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
+// #include "/Users/sca/opt/anaconda3/include/omp.h"
 
 
 // bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
@@ -89,7 +84,7 @@
 
 
 
-typedef std::pair<int, int> MinMaxEdge; // (vertex, weight
+typedef std::pair<int, int> MinMaxEdge; // (vertex, weight)
 const int INF = std::numeric_limits<int>::max();
 
 Graph createRandomGraph(int numVertices, int numEdges, double minWeight, double maxWeight) {
@@ -207,14 +202,11 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
 
 int main(int argc, char *argv[]) {
     if (argc < 4) {
-    if (argc < 5) {
         std::cout << "Usage: " << argv[0]
                   << " <N: number of nodes in input graph> "
                   << " <path to input graph file or type [random, grid]> "
-                  << " <algorithm to use: [dijkstra, deltastepping, paralleldeltastepping]> "
-                  << " <optional: delta for deltastepping algorithm: [float]> "
-                  << " <optional: number of threads for paralleldeltastepping algorithm: [int]>" << std::endl;
                   << " <delta for deltastepping algorithm: [float]> "
+                  << " <number of threads for paralleldeltastepping algorithm: [int]> "
                   << " <optional: number of edges for random graph> "
                   << " <optional: min weight for random graph> "
                   << " <optional: max weight for random graph> " << std::endl;
@@ -223,8 +215,8 @@ int main(int argc, char *argv[]) {
 
     int numVertices = std::stoi(argv[1]);
     std::string graphSource = argv[2];
-    std::string algorithm = argv[3];
-    double delta = argc > 4 ? std::stod(argv[4]) : 1.0;
+    double delta = std::stod(argv[3]);
+    int numThreads = std::stoi(argv[4]);
     int numEdges = argc > 5 ? std::stoi(argv[5]) : numVertices * 5;
     double minWeight = argc > 6 ? std::stod(argv[6]) : 1.0;
     double maxWeight = argc > 7 ? std::stod(argv[7]) : 10.0;
@@ -238,68 +230,58 @@ int main(int argc, char *argv[]) {
         graph = loadGraphFromFile(numVertices, graphSource);
     }
 
-    std::vector<double> distances;
+    std::vector<double> dijkstraDistances, deltaSteppingDistances, parallelDeltaSteppingDistances;
 
+    // Run Dijkstra's algorithm
     auto startTime = std::chrono::high_resolution_clock::now();
-
-    if (algorithm == "dijkstra") {
-        std::cout << "Running Dijkstra's algorithm" << std::endl;
-        distances = dijkstra(graph, 0);
-    } else if (algorithm == "deltastepping") {
-        DeltaSteppingSequential deltaStepping(graph, 0, delta, false);
-        deltaStepping.run();
-        distances = deltaStepping.getDistances();
-    } else if (algorithm == "paralleldeltastepping") {
-        distances = deltaSteppingParallel(graph, 0, delta, 2);
-    } else {
-        std::cerr << "Unsupported algorithm. Use dijkstra, deltastepping, or paralleldeltastepping." << std::endl;
-        return 1;
-    }
-
+    std::cout << "Running Dijkstra's algorithm" << std::endl;
+    dijkstraDistances = dijkstra(graph, 0);
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-    std::cout << algorithm << " took " << duration << " ms." << std::endl;
-
-    if (numVertices <= 20) {
-        std::cout << "Vertex\tDistance from Source" << std::endl;
-        for (int i = 0; i < numVertices; ++i) {
-            std::cout << i << "\t" << distances[i] << std::endl;
-        }
-    }
-
-    std::ofstream outFile("output_" + algorithm + ".txt");
-    for (const auto& dist : distances) {
-        outFile << dist << "\n";
-    }
-
-    // Run Dijkstra for comparison and print results
-    std::cout << "Running Dijkstra's algorithm for comparison..." << std::endl;
-    startTime = std::chrono::high_resolution_clock::now();
-    std::vector<double> dijkstraDistances = dijkstra(graph, 0);
-    endTime = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     std::cout << "Dijkstra's algorithm took " << duration << " ms." << std::endl;
 
-    if (numVertices <= 20) {
-        std::cout << "Vertex\tDijkstra Distance from Source" << std::endl;
-        for (int i = 0; i < numVertices; ++i) {
-            std::cout << i << "\t" << dijkstraDistances[i] << std::endl;
-        }
-    }
+    // Run Delta Stepping Sequential algorithm
+    startTime = std::chrono::high_resolution_clock::now();
+    DeltaSteppingSequential deltaStepping(graph, 0, delta, false);
+    deltaStepping.run();
+    deltaSteppingDistances = deltaStepping.getDistances();
+    endTime = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    std::cout << "Delta Stepping Sequential algorithm took " << duration << " ms." << std::endl;
+
+    // Run Parallel Delta Stepping algorithm
+    startTime = std::chrono::high_resolution_clock::now();
+    DeltaSteppingParallel deltaSteppingParallel(graph, 0, delta, false, numThreads);
+    deltaSteppingParallel.run();
+    parallelDeltaSteppingDistances = deltaSteppingParallel.getDistances();
+    endTime = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    std::cout << "Parallel Delta Stepping algorithm took " << duration << " ms." << std::endl;
 
     // Compare the results
     bool isCorrect = true;
     for (int i = 0; i < numVertices; ++i) {
-        if (distances[i] != dijkstraDistances[i]) {
-            std::cout << "Mismatch at vertex " << i << ": Delta Stepping = " << distances[i] << ", Dijkstra = " << dijkstraDistances[i] << std::endl;
+        if (deltaSteppingDistances[i] != dijkstraDistances[i]) {
+            std::cout << "Mismatch at vertex " << i << ": Delta Stepping = " << deltaSteppingDistances[i] << ", Dijkstra = " << dijkstraDistances[i] << std::endl;
+            isCorrect = false;
+        }
+        if (parallelDeltaSteppingDistances[i] != dijkstraDistances[i]) {
+            std::cout << "Mismatch at vertex " << i << ": Parallel Delta Stepping = " << parallelDeltaSteppingDistances[i] << ", Dijkstra = " << dijkstraDistances[i] << std::endl;
             isCorrect = false;
         }
     }
 
     if (isCorrect) {
-        std::cout << "Delta Stepping results match Dijkstra's results!" << std::endl;
+        std::cout << "All algorithms produced matching results!" << std::endl;
     } else {
-        std::cout << "Delta Stepping results do not match Dijkstra's results!" << std::endl;
+        std::cout << "There were mismatches between the algorithm results!" << std::endl;
+    }
+
+    // Output results to file
+    std::ofstream outFile("output_results.txt");
+    outFile << "Vertex\tDijkstra\tDeltaStepping\tParallelDeltaStepping\n";
+    for (int i = 0; i < numVertices; ++i) {
+        outFile << i << "\t" << dijkstraDistances[i] << "\t" << deltaSteppingDistances[i] << "\t" << parallelDeltaSteppingDistances[i] << "\n";
     }
 
     return 0;

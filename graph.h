@@ -6,8 +6,8 @@
 #include <utility>
 #include <limits>
 #include "Edge.h"
-#include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
-#include "/Users/sca/opt/anaconda3/include/omp.h"
+// #include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
+// #include "/Users/sca/opt/anaconda3/include/omp.h"
 
 typedef std::pair<int, double> vwPair; // (vertex, weight)
 

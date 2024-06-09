@@ -5,7 +5,7 @@ CXXFLAGS = -pthread -std=c++11 -Wall
 EXECUTABLE = output_program
 
 # Source files
-SOURCES = main.cpp DeltaSteppingSequential.cpp delta_stepping_parallel.cpp Dijkstra.cpp 
+SOURCES = main.cpp DeltaSteppingSequential.cpp DeltaSteppingParallel.cpp Dijkstra.cpp 
 
 # Object files
 OBJECTS = $(SOURCES:.cpp=.o)
