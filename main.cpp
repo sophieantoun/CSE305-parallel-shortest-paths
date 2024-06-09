@@ -17,30 +17,10 @@
 #include "dijkstra.h"
 #include "DeltaSteppingSequential.h"
 #include "delta_stepping_parallel.h"
+#include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
+#include "/Users/sca/opt/anaconda3/include/omp.h"
 
 
-// int main() {
-//     Graph graph(6);
-
-//     // Add edges
-//     graph.addEdge(0, 1, 50);
-//     graph.addEdge(0, 2, 50);
-//     graph.addEdge(1, 3, 40);
-//     graph.addEdge(2, 4, 70);
-//     graph.addEdge(3, 5, 70);
-//     graph.addEdge(4, 5, 40);
-
-//     // Create DeltaSteppingSequential object with delta value
-//     DeltaSteppingSequential deltaStepping(graph, 0, true);
-
-//     // Compute shortest paths
-//     deltaStepping.solveLightHeavy();
-
-//     // Print solution
-//     deltaStepping.printSolution();
-
-//     return 0;
-// }
 // bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
 //     return distances.size() == expected.size() && std::equal(distances.begin(), distances.end(), expected.begin());
 // }
@@ -109,7 +89,7 @@
 
 
 
-// typedef std::pair<int, int> Edge; // (vertex, weight)
+typedef std::pair<int, int> MinMaxEdge; // (vertex, weight
 const int INF = std::numeric_limits<int>::max();
 
 Graph createRandomGraph(int numVertices, int numEdges, double minWeight, double maxWeight) {
@@ -123,6 +103,26 @@ Graph createRandomGraph(int numVertices, int numEdges, double minWeight, double 
     }
     return graph;
 }
+
+// Function to find the smallest and largest edge weights
+MinMaxEdge findMinMaxEdgeWeights(const std::vector<std::vector<vwPair>>& adjList, int numVertices) {
+    std::cout << "Finding min and max edge weights" << std::endl;
+    int minWeight = INF;
+    int maxWeight = -INF;
+    for (int i = 0; i < numVertices; ++i) {
+        for (const auto& edge : adjList[i]) {
+            double weight = edge.second;
+            if (weight > maxWeight) {
+                maxWeight = weight;
+            }
+            if (weight < minWeight && weight > 0) {
+                minWeight = weight;
+            }
+        }
+    }
+    return std::make_pair(minWeight, maxWeight);
+}
+
 
 // Function to generate a grid graph
 Graph createGridGraph(int gridSize, double edgeProbability) {
@@ -182,9 +182,10 @@ Graph createGridGraph(int gridSize, double edgeProbability) {
 }
 // Function to parse a graph from a file
 Graph loadGraphFromFile(int numVertices, const std::string& filename) {
+    std::cout << "Loading graph from file: " << filename << std::endl;
     std::ifstream file(filename);
     if (!file) {
-        std::cerr << "Error: Failed to open the file." << std::endl;
+        std::cerr << "Error: Failed to open the file: " << filename << std::endl;
         exit(1);
     }
     Graph graph(numVertices);
@@ -193,6 +194,7 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
         std::istringstream iss(line);
         int u, v;
         double weight;
+        std::cout << "Reading edge: " << line << std::endl; // Debug line
         if (iss >> u >> v >> weight) {
             graph.addEdge(u, v, weight);
         } else {
@@ -204,11 +206,14 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
 }
 
 int main(int argc, char *argv[]) {
+    if (argc < 4) {
     if (argc < 5) {
         std::cout << "Usage: " << argv[0]
                   << " <N: number of nodes in input graph> "
                   << " <path to input graph file or type [random, grid]> "
                   << " <algorithm to use: [dijkstra, deltastepping, paralleldeltastepping]> "
+                  << " <optional: delta for deltastepping algorithm: [float]> "
+                  << " <optional: number of threads for paralleldeltastepping algorithm: [int]>" << std::endl;
                   << " <delta for deltastepping algorithm: [float]> "
                   << " <optional: number of edges for random graph> "
                   << " <optional: min weight for random graph> "
@@ -238,6 +243,7 @@ int main(int argc, char *argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     if (algorithm == "dijkstra") {
+        std::cout << "Running Dijkstra's algorithm" << std::endl;
         distances = dijkstra(graph, 0);
     } else if (algorithm == "deltastepping") {
         DeltaSteppingSequential deltaStepping(graph, 0, delta, false);

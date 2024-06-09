@@ -35,4 +35,8 @@ private:
     int bucketIndex;
 };
 
+// Add this function declaration
+std::vector<double> deltaStepping(const Graph& graph, int source, double delta);
+
+
 #endif // DELTASTEPPINGSEQUENTIAL_H
