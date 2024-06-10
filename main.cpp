@@ -175,6 +175,19 @@ Graph createGridGraph(int gridSize, double edgeProbability) {
     }
     return graph;
 }
+Graph createDenseGraph(int numVertices, double minWeight, double maxWeight, double edgeProbability = 0.9) {
+    Graph graph(numVertices);
+    std::srand(std::time(nullptr)); 
+    for (int u = 0; u < numVertices; ++u) {
+        for (int v = 0; v < numVertices; ++v) {
+            if (u != v && (static_cast<double>(rand()) / static_cast<double>(RAND_MAX)) < edgeProbability) {
+                double weight = minWeight + (static_cast<double>(rand()) / static_cast<double>(RAND_MAX)) * (maxWeight - minWeight);
+                graph.addEdge(u, v, weight);
+            }
+        }
+    }
+    return graph;
+}
 // Function to parse a graph from a file
 Graph loadGraphFromFile(int numVertices, const std::string& filename) {
     std::cout << "Loading graph from file: " << filename << std::endl;
@@ -201,10 +214,10 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 4) {
+    if (argc < 5) {
         std::cout << "Usage: " << argv[0]
                   << " <N: number of nodes in input graph> "
-                  << " <path to input graph file or type [random, grid]> "
+                  << " <path to input graph file or type [random, grid, dense]> "
                   << " <delta for deltastepping algorithm: [float]> "
                   << " <number of threads for paralleldeltastepping algorithm: [int]> "
                   << " <optional: number of edges for random graph> "
@@ -220,12 +233,15 @@ int main(int argc, char *argv[]) {
     int numEdges = argc > 5 ? std::stoi(argv[5]) : numVertices * 5;
     double minWeight = argc > 6 ? std::stod(argv[6]) : 1.0;
     double maxWeight = argc > 7 ? std::stod(argv[7]) : 10.0;
+    double edgeProbability = 0.5; // Default edge probability for dense graph
 
     Graph graph(numVertices);
     if (graphSource == "random") {
         graph = createRandomGraph(numVertices, numEdges, minWeight, maxWeight);
     } else if (graphSource == "grid") {
         graph = createGridGraph(numVertices, 0.5);
+    } else if (graphSource == "dense") {
+        graph = createDenseGraph(numVertices, minWeight, maxWeight, edgeProbability);
     } else {
         graph = loadGraphFromFile(numVertices, graphSource);
     }
