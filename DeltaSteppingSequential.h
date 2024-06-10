@@ -3,40 +3,36 @@
 
 #include <vector>
 #include <set>
+#include <iostream>
 #include <limits>
 #include <cmath>
-#include <iostream>
 #include "graph.h"
+#include "Edge.h"
 
 class DeltaSteppingSequential {
 public:
-    DeltaSteppingSequential(const Graph& graph, const int source, const double delta, const bool debug = false);
-
+    DeltaSteppingSequential(const Graph& graph, const int source, const double delta, const bool debug);
     void run();
-    void printSolution() const;
     const std::vector<double>& getDistances() const;
+    void printSolution() const;
 
 private:
-    void classifyEdges();
-    void collectEdgesFromBucket(const std::set<int>& bucket, std::vector<Edge>& lightEdges, std::vector<Edge>& heavyEdges);
-    void relaxEdges(std::vector<Edge>& edges);
-    void printEdges() const;
-    void printBuckets() const;
-
     const Graph& graph;
-    int source;
-    bool debug;
-    double delta;
+    const int source;
+    const double delta;
+    const bool debug;
     std::vector<double> distances;
     std::vector<int> predecessors;
     std::vector<std::vector<int>> lightEdges;
     std::vector<std::vector<int>> heavyEdges;
     std::vector<std::set<int>> buckets;
     int bucketIndex;
+
+    void initialize();
+    void processBucket();
+    void processEdgeTasks(std::vector<GraphEdge>& edgeTasks);
+    void printEdges() const;
+    void printBuckets() const;
 };
-
-// Add this function declaration
-std::vector<double> deltaStepping(const Graph& graph, int source, double delta);
-
 
 #endif // DELTASTEPPINGSEQUENTIAL_H

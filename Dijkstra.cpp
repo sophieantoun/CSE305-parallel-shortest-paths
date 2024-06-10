@@ -1,7 +1,3 @@
-#include <queue>
-#include <limits>
-#include <stdexcept>
-
 #include "dijkstra.h"	
 
 // Dijkstra algorithm 
@@ -14,7 +10,7 @@ std::vector<double> dijkstra(const Graph &graph, int source)
         throw std::invalid_argument("The source vertex is out of the range of the graph");
 
 
-    std::vector<double> distances(numVertices, std::numeric_limits<double>::max());  //We initialize distances to all vertices as infinite
+    std::vector<double> distances(numVertices, std::numeric_limits<double>::infinity());  //We initialize distances to all vertices as infinite
 
     std::vector<std::vector<vwPair> > adjacencyList = graph.getAdjacencyList();    //Adjacency list from the graph
 

@@ -1,6 +1,8 @@
 #ifndef DIJKSTRA_H
 #define DIJKSTRA_H
-
+#include <queue>
+#include <limits>
+#include <stdexcept>
 #include <vector>
 #include "graph.h"
 

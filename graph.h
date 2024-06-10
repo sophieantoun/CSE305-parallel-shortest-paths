@@ -1,13 +1,13 @@
 #ifndef GRAPH_H
 #define GRAPH_H
+
 #include <vector>
 #include <iostream>
 #include <set>
 #include <utility>
 #include <limits>
+#include <unordered_map>
 #include "Edge.h"
-// #include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
-// #include "/Users/sca/opt/anaconda3/include/omp.h"
 
 typedef std::pair<int, double> vwPair; // (vertex, weight)
 
@@ -15,14 +15,16 @@ class Graph
 {
 private:
     int numVertices;                           // number of vertices
-    int numEdges;                          // number of edges
-    std::vector<std::vector<vwPair> > adjacencyList; // adjacency list
+    int numEdges;                              // number of edges
+    std::vector<std::vector<vwPair>> adjacencyList; // adjacency list
+    std::vector<std::unordered_map<int, double>> edgeWeightMap; // hash map for edge weights
 
 public:
     // Initialize the graph with a given number of vertices
     Graph(int n) : numVertices(n), numEdges(0)
     {
         adjacencyList.resize(n);
+        edgeWeightMap.resize(n);
     }
 
     // Get the number of vertices in the graph
@@ -38,7 +40,7 @@ public:
     }
 
     // Get the adjacency list of the graph
-    std::vector<std::vector<vwPair> > getAdjacencyList() const
+    std::vector<std::vector<vwPair>> getAdjacencyList() const
     {
         return adjacencyList;
     }
@@ -46,22 +48,22 @@ public:
     // Add an edge to the graph between a source and a destination vertex with a given weight
     void addEdge(int source, int destination, double weight)
     {
-    
-            if (source < 0 || source >= numVertices || destination < 0 || destination >= numVertices)
+        if (source < 0 || source >= numVertices || destination < 0 || destination >= numVertices)
         {
             std::cerr << "Error: Vertex out of bounds (source: " << source << ", destination: " << destination << ")" << std::endl;
             return;
         }
 
         adjacencyList[source].push_back(std::make_pair(destination, weight));
+        edgeWeightMap[source][destination] = weight; // Add to hash map
         // adjacencyList[destination].push_back(std::make_pair(source, weight));  // uncomment to make the graph undirected
         numEdges++;
     }
 
     // Get all edges of the graph
-    std::vector<Edge> getEdges() const
+    std::vector<GraphEdge> getEdges() const
     {
-        std::vector<Edge> edges;
+        std::vector<GraphEdge> edges;
         for (int u = 0; u < numVertices; ++u)
         {
             for (const auto& v : adjacencyList[u])
@@ -75,12 +77,10 @@ public:
     // Get the weight of an edge between two vertices
     double getEdgeWeight(int u, int v) const
     {
-        for (const auto& edge : adjacencyList[u])
+        auto it = edgeWeightMap[u].find(v);
+        if (it != edgeWeightMap[u].end())
         {
-            if (edge.first == v)
-            {
-                return edge.second;
-            }
+            return it->second;
         }
         return std::numeric_limits<double>::infinity();
     }

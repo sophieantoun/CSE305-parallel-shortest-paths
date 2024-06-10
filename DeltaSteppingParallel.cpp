@@ -25,11 +25,11 @@ DeltaSteppingParallel::DeltaSteppingParallel(const Graph& graph, int source, dou
 }
 
 void DeltaSteppingParallel::classifyEdges() {
-    for (const Edge& edge : graph.getEdges()) {
+    for (const GraphEdge& edge : graph.getEdges()) {
         if (edge.getWeight() <= delta) {
-            lightEdges[edge.getFrom()].push_back(edge.getTo());
+            lightEdges[edge.getSource()].push_back(edge.getDestination());
         } else {
-            heavyEdges[edge.getFrom()].push_back(edge.getTo());
+            heavyEdges[edge.getSource()].push_back(edge.getDestination());
         }
     }
 }
@@ -62,8 +62,8 @@ void DeltaSteppingParallel::processBucket(int threadId) {
     }
 
     while (!currentBucket.empty()) {
-        std::vector<Edge> lightRequests;
-        std::vector<Edge> heavyRequests;
+        std::vector<GraphEdge> lightRequests;
+        std::vector<GraphEdge> heavyRequests;
         for (int vertex : currentBucket) {
             {
                 std::lock_guard<std::mutex> lock(bucketMutex);
@@ -79,7 +79,7 @@ void DeltaSteppingParallel::processBucket(int threadId) {
             }
         }
 
-        for (const Edge& edge : lightRequests) {
+        for (const GraphEdge& edge : lightRequests) {
             relaxEdge(edge);
         }
 
@@ -89,14 +89,14 @@ void DeltaSteppingParallel::processBucket(int threadId) {
         }
     
 
-        for (const Edge& edge : heavyRequests) {
+        for (const GraphEdge& edge : heavyRequests) {
             relaxEdge(edge);
         }
 }
 }
-void DeltaSteppingParallel::relaxEdge(const Edge& edge) {
-    int fromVertex = edge.getFrom();
-    int toVertex = edge.getTo();
+void DeltaSteppingParallel::relaxEdge(const GraphEdge& edge) {
+    int fromVertex = edge.getSource();
+    int toVertex = edge.getDestination();
     double weight = edge.getWeight();
     double newDistance = distances[fromVertex] + weight;
 

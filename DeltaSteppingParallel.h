@@ -20,7 +20,7 @@ public:
 private:
     void classifyEdges();
     void processBucket(int threadId);
-    void relaxEdge(const Edge& edge);
+    void relaxEdge(const GraphEdge& edge);
     void printBuckets() const;
 
     const Graph& graph;

@@ -1,19 +1,19 @@
 #ifndef EDGE_H
 #define EDGE_H
 
-class Edge {
+class GraphEdge {
 public:
-    Edge(int from, int to, double weight)
-        : from_(from), to_(to), weight_(weight) {}
+    GraphEdge(int source, int destination, double weight)
+        : sourceVertex(source), destinationVertex(destination), edgeWeight(weight) {}
 
-    int getFrom() const { return from_; }
-    int getTo() const { return to_; }
-    double getWeight() const { return weight_; }
+    int getSource() const { return sourceVertex; }
+    int getDestination() const { return destinationVertex; }
+    double getWeight() const { return edgeWeight; }
 
 private:
-    int from_;
-    int to_;
-    double weight_;
+    int sourceVertex;
+    int destinationVertex;
+    double edgeWeight;
 };
 
 #endif // EDGE_H
