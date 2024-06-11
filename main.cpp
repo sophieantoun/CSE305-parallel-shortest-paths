@@ -321,9 +321,9 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
 
 int main() {
     // Define parameters for benchmarks
-    std::vector<int> nodeCounts = {200, 500};
+    std::vector<int> nodeCounts = {1000, 5000, 10000};
     std::vector<std::string> graphTypes = {"dense", "random", "grid"};
-    std::vector<std::pair<double, double>> weightRanges = {{1, 5}, {1, 10}, {15, 40}};
+    std::vector<std::pair<double, double>> weightRanges = {{1, 5}, {1, 10}, {1, 100}};
     std::vector<double> deltas = {0.5, 1, 3, 5};
     
     for (int numVertices : nodeCounts) {
@@ -333,7 +333,7 @@ int main() {
                     double minWeight = weightRange.first;
                     double maxWeight = weightRange.second;
                     int numEdges = numVertices * 5;
-                    runBenchmarks(numVertices, graphType, delta, 8, numEdges, minWeight, maxWeight);
+                    runBenchmarks(numVertices, graphType, delta, 16, numEdges, minWeight, maxWeight);
                 }
             }
         }
