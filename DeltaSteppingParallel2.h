@@ -8,21 +8,19 @@
 #include <thread>
 #include <iostream>
 #include <cmath>
-
-
-struct Bucket {
-    std::set<int> vertices;
-    std::mutex mutex;
-};
-
+#include "ThreadPool.h"
 class DeltaSteppingParallel2 {
 public:
     DeltaSteppingParallel2(const Graph& graph, int source, double delta, bool debug, int numThreads);
     void run();
-    const std::vector<double>& getDistances() const;
-    void printBuckets() const;
+
+    const std::vector<double> &getDistances() const;
 
 private:
+    struct Bucket {
+        std::set<int> vertices;
+        std::mutex mutex; 
+    };
     const Graph& graph;
     int source;
     double delta;
@@ -32,16 +30,20 @@ private:
     std::vector<int> predecessors;
     std::vector<std::vector<int>> lightEdges;
     std::vector<std::vector<int>> heavyEdges;
-    std::vector<Bucket> buckets;
     int bucketIndex;
     std::mutex bucketMutex;
+    std::vector<Bucket> buckets;
+    ThreadPool pool; 
 
-    void classifyEdges();
-    void processEdges(bool isLight, std::vector<std::thread>& workers);
+
     void collectEdges(std::vector<std::pair<int, double>>& edges, bool isLight);
-    void relaxEdges(const std::vector<std::pair<int, double>>& edges);
     void processBucket(int threadId);
-    void relaxEdge(const GraphEdge& edge);
+    void classifyEdges();
+    void processEdges(bool isLight);
+    void relaxSingleEdge(const GraphEdge& edge);  // Correctly handle a single GraphEdge
+    void relaxEdges(const std::vector<std::pair<int, double>>& edges);  // Handle multiple edges
+
+    void printBuckets() const;
 };
 
 #endif // DELTASTEPPINGPARALLEL2_H

@@ -1,0 +1,25 @@
+Graph Type,Vertices,Edges,Algorithm,Time
+dense,200,1000,Delta Stepping Sequential,341.9166666666667
+dense,200,1000,Dijkstra,70.16666666666667
+dense,200,1000,Parallel Delta Stepping (version 1),3066.3333333333335
+dense,200,1000,Parallel Delta Stepping (version 2),505.2916666666667
+dense,500,2500,Delta Stepping Sequential,1903.1666666666667
+dense,500,2500,Dijkstra,458.8333333333333
+dense,500,2500,Parallel Delta Stepping (version 1),17748.0
+dense,500,2500,Parallel Delta Stepping (version 2),2865.0833333333335
+grid,200,1000,Delta Stepping Sequential,2989.4166666666665
+grid,200,1000,Dijkstra,756.5
+grid,200,1000,Parallel Delta Stepping (version 1),23249.375
+grid,200,1000,Parallel Delta Stepping (version 2),3922.375
+grid,500,2500,Delta Stepping Sequential,18904.88888888889
+grid,500,2500,Dijkstra,4880.666666666667
+grid,500,2500,Parallel Delta Stepping (version 1),151540.45454545456
+grid,500,2500,Parallel Delta Stepping (version 2),20984.371428571427
+random,200,1000,Delta Stepping Sequential,17.333333333333332
+random,200,1000,Dijkstra,4.166666666666667
+random,200,1000,Parallel Delta Stepping (version 1),145.08333333333334
+random,200,1000,Parallel Delta Stepping (version 2),34.979166666666664
+random,500,2500,Delta Stepping Sequential,41.5
+random,500,2500,Dijkstra,10.166666666666666
+random,500,2500,Parallel Delta Stepping (version 1),378.25
+random,500,2500,Parallel Delta Stepping (version 2),66.08333333333333

@@ -13,77 +13,10 @@
 #include "DeltaSteppingSequential.h"
 #include "DeltaSteppingParallel.h"
 #include "DeltaSteppingParallel2.h"
+#include "ThreadPool.h"
+
 // #include "/opt/homebrew/Cellar/libomp/18.1.5/include/omp.h"
 // #include "/Users/sca/opt/anaconda3/include/omp.h"
-
-
-// bool compareDistances(const std::vector<double> &distances, const std::vector<double> &expected) {
-//     return distances.size() == expected.size() && std::equal(distances.begin(), distances.end(), expected.begin());
-// }
-
-// // Function to test correctness
-// void testCorrectness() {
-//     int passedTests = 0;
-//     double delta = 3.0; // Delta for Delta-Stepping
-
-//     // Test case 1: Simple graph with 5 vertices
-//     Graph g1(5);
-//     g1.addEdge(0, 1, 10);
-//     g1.addEdge(0, 3, 5);
-//     g1.addEdge(1, 2, 1);
-//     g1.addEdge(3, 1, 3);
-//     g1.addEdge(3, 4, 2);
-//     g1.addEdge(4, 2, 9);
-//     g1.addEdge(4, 0, 7);
-
-//     std::vector<double> distances1D = dijkstra(g1, 0);
-//     std::vector<double> distances1DS = deltaStepping(g1, 0, delta);
-
-//     std::vector<double> expected1 = {0, 8, 9, 5, 7};
-//     if (compareDistances(distances1D, expected1) && compareDistances(distances1DS, expected1)) {
-//         ++passedTests;
-//     }
-    
-//     // Test case 2: Graph with negative weights (shouldn't be used with Dijkstra, but to see behavior)
-//     Graph g2(4);
-//     g2.addEdge(0, 1, 2);
-//     g2.addEdge(1, 2, -5); // Negative weight
-//     g2.addEdge(2, 3, 1);
-//     g2.addEdge(3, 0, 3);
-
-//     std::vector<double> distances2D = dijkstra(g2, 0);
-//     std::vector<double> distances2DS = deltaStepping(g2, 0, delta);
-
-//     std::vector<double> expected2 = {0, 2, -3, -2}; // Expected outcome may not be reliable due to negative weights
-//     if (compareDistances(distances2D, expected2) && compareDistances(distances2DS, expected2)) {
-//         ++passedTests;
-//     }
-    
-//     // Test case 3: Disconnected graph
-//     Graph g3(6);
-//     g3.addEdge(0, 1, 4);
-//     g3.addEdge(1, 2, 6);
-//     g3.addEdge(2, 0, 5);
-//     // Components 3, 4, 5 are disconnected from 0, 1, 2
-
-//     std::vector<double> distances3D = dijkstra(g3, 0);
-//     std::vector<double> distances3DS = deltaStepping(g3, 0, delta);
-
-//     std::vector<double> expected3 = {0, 4, 10, std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
-//     if (compareDistances(distances3D, expected3) && compareDistances(distances3DS, expected3)) {
-//         ++passedTests;
-//     }
-
-//     std::cout << "Number of test cases passed: " << passedTests << "/3" << std::endl;
-// }
-
-// int main() {
-//     std::cout << "Testing correctness of Dijkstra's and Delta-Stepping algorithms:" << std::endl;
-//     testCorrectness();
-//     return 0;
-// }
-
-
 
 typedef std::pair<int, int> MinMaxEdge; // (vertex, weight)
 const int INF = std::numeric_limits<int>::max();
@@ -341,18 +274,3 @@ int main() {
     }
     return 0;
 }
-// // // Graph g(4);
-// // // g.addEdge(0, 1, 1);
-// // // g.addEdge(1, 2, 1);
-// // // g.addEdge(2, 3, 1);
-// // // g.addEdge(0, 3, 10); // Longer edge that should not be the shortest path
-
-// // // // Assuming getAdjacencyList returns vector<vector<pair<int, double>>>
-// // // auto adjList = g.getAdjacencyList();
-// // // for (int i = 0; i < adjList.size(); ++i) {
-// // //     std::cout << "Node " << i << " has edges to:\n";
-// // //     for (const auto& edge : adjList[i]) {
-// // //         std::cout << "  - Node " << edge.first << " with weight " << edge.second << "\n";
-// // //     }
-// // // } 
-// // }

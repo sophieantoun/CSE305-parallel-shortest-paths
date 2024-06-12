@@ -1,11 +1,13 @@
 #include "DeltaSteppingParallel2.h"
+#include "ThreadPool.h"
 
 DeltaSteppingParallel2::DeltaSteppingParallel2(const Graph& graph, int source, double delta, bool debug, int numThreads)
     : graph(graph), source(source), delta(delta), debug(debug), numThreads(numThreads),
       distances(graph.getNumVertices(), std::numeric_limits<double>::infinity()),
       predecessors(graph.getNumVertices(), -1),
       lightEdges(graph.getNumVertices()), heavyEdges(graph.getNumVertices()),
-      buckets(static_cast<int>(graph.getNumVertices() / delta) + 1), bucketIndex(0)
+      bucketIndex(0), buckets(static_cast<int>(graph.getNumVertices() / delta) + 1), 
+      pool(numThreads)
 {
     classifyEdges();
 
@@ -37,19 +39,8 @@ void DeltaSteppingParallel2::classifyEdges() {
 
 void DeltaSteppingParallel2::run() {
     while (bucketIndex < buckets.size()) {
-        std::vector<std::thread> workers;
-
-        processEdges(true, workers);  // Process light edges
-        processEdges(false, workers); // Process heavy edges
-
-        // Join all threads
-        for (auto& worker : workers) {
-            if (worker.joinable()) {
-                worker.join();
-            }
-        }
-
-        // Move to the next non-empty bucket
+        processEdges(true);  
+        processEdges(false); 
         ++bucketIndex;
         while (bucketIndex < buckets.size() && buckets[bucketIndex].vertices.empty()) {
             ++bucketIndex;
@@ -57,21 +48,21 @@ void DeltaSteppingParallel2::run() {
     }
 }
 
-void DeltaSteppingParallel2::processEdges(bool isLight, std::vector<std::thread>& workers) {
+void DeltaSteppingParallel2::processEdges(bool isLight) {
     std::vector<std::pair<int, double>> edges;
     collectEdges(edges, isLight);
 
     int threads = std::min(numThreads, static_cast<int>(edges.size()));
-    if (threads == 0) threads = 1;
+    if (threads == 0) threads = 1;  
 
     int blockSize = edges.size() / threads;
-    for (int i = 0; i < threads - 1; ++i) {
+    for (int i = 0; i < threads; ++i) {
         int start = i * blockSize;
-        int end = (i + 1) * blockSize;
-        workers.emplace_back(&DeltaSteppingParallel2::relaxEdges, this, std::vector<std::pair<int, double>>(edges.begin() + start, edges.begin() + end));
+        int end = (i + 1 < threads) ? (i + 1) * blockSize : edges.size();
+        pool.enqueue([this, start, end, &edges]() {
+            this->relaxEdges(std::vector<std::pair<int, double>>(edges.begin() + start, edges.begin() + end));
+        });
     }
-    // Last block
-    workers.emplace_back(&DeltaSteppingParallel2::relaxEdges, this, std::vector<std::pair<int, double>>(edges.begin() + (threads - 1) * blockSize, edges.end()));
 }
 
 void DeltaSteppingParallel2::collectEdges(std::vector<std::pair<int, double>>& edges, bool isLight) {
@@ -85,32 +76,64 @@ void DeltaSteppingParallel2::collectEdges(std::vector<std::pair<int, double>>& e
     }
 }
 
+
+void DeltaSteppingParallel2::relaxSingleEdge(const GraphEdge& edge) {
+    int fromVertex = edge.getSource();
+    int toVertex = edge.getDestination();
+    double weight = edge.getWeight();
+    double newDistance = distances[fromVertex] + weight;
+
+    if (newDistance < distances[toVertex]) {
+        std::lock_guard<std::mutex> lock(bucketMutex);
+        int oldBucketIndex = static_cast<int>(std::floor(distances[toVertex] / delta));
+        int newBucketIndex = static_cast<int>(std::floor(newDistance / delta));
+
+        if (oldBucketIndex >= 0 && oldBucketIndex < buckets.size()) {
+            buckets[oldBucketIndex].vertices.erase(toVertex);
+        }
+        if (newBucketIndex >= 0 && newBucketIndex < buckets.size()) {
+            buckets[newBucketIndex].vertices.insert(toVertex);
+        }
+
+        distances[toVertex] = newDistance;
+        predecessors[toVertex] = fromVertex;
+
+        if (debug) {
+            std::cout << "Relaxed edge (" << fromVertex << " -> " << toVertex << ") with new distance " << newDistance << std::endl;
+        }
+    }
+}
+
+
+
 void DeltaSteppingParallel2::relaxEdges(const std::vector<std::pair<int, double>>& edges) {
+    std::lock_guard<std::mutex> lock(bucketMutex);
     for (const auto& edge : edges) {
         int vertex = edge.first;
         double newDistance = edge.second;
 
-        std::lock_guard<std::mutex> lock(bucketMutex);
         if (newDistance < distances[vertex]) {
             int oldBucketIndex = static_cast<int>(std::floor(distances[vertex] / delta));
             int newBucketIndex = static_cast<int>(std::floor(newDistance / delta));
 
-            if (oldBucketIndex < buckets.size() && oldBucketIndex >= 0) {
+            if (oldBucketIndex >= 0 && oldBucketIndex < buckets.size()) {
                 buckets[oldBucketIndex].vertices.erase(vertex);
             }
-            if (newBucketIndex < buckets.size() && newBucketIndex >= 0) {
+            if (newBucketIndex >= 0 && newBucketIndex < buckets.size()) {
                 buckets[newBucketIndex].vertices.insert(vertex);
             }
 
             distances[vertex] = newDistance;
-            predecessors[vertex] = source;
+            predecessors[vertex] = vertex; // Update if needed, otherwise ensure this is correct
 
             if (debug) {
-                std::cout << "Relaxed edge (" << source << " -> " << vertex << ") with new distance " << newDistance << std::endl;
+                std::cout << "Relaxed edge to vertex " << vertex << " with new distance " << newDistance << std::endl;
             }
         }
     }
 }
+
+
 
 void DeltaSteppingParallel2::processBucket(int threadId) {
     std::vector<int> currentBucket;
@@ -140,7 +163,7 @@ void DeltaSteppingParallel2::processBucket(int threadId) {
         }
 
         for (const GraphEdge& edge : lightRequests) {
-            relaxEdge(edge);
+            relaxSingleEdge(edge);  // Correct method call
         }
 
         {
@@ -149,40 +172,12 @@ void DeltaSteppingParallel2::processBucket(int threadId) {
         }
 
         for (const GraphEdge& edge : heavyRequests) {
-            relaxEdge(edge);
+            relaxSingleEdge(edge);  // Correct method call
         }
     }
 }
 
 
-void DeltaSteppingParallel2::relaxEdge(const GraphEdge& edge) {
-    int fromVertex = edge.getSource();
-    int toVertex = edge.getDestination();
-    double weight = edge.getWeight();
-    double newDistance = distances[fromVertex] + weight;
-
-    if (newDistance < distances[toVertex]) {
-        int oldBucketIndex = static_cast<int>(std::floor(distances[toVertex] / delta));
-        int newBucketIndex = static_cast<int>(std::floor(newDistance / delta));
-
-        {
-            std::lock_guard<std::mutex> lock(buckets[bucketIndex].mutex);
-            if (oldBucketIndex < buckets.size() && oldBucketIndex >= 0) {
-                buckets[oldBucketIndex].vertices.erase(toVertex);
-            }
-            if (newBucketIndex < buckets.size() && newBucketIndex >= 0) {
-                buckets[newBucketIndex].vertices.insert(toVertex);
-            }
-        }
-
-        distances[toVertex] = newDistance;
-        predecessors[toVertex] = fromVertex;
-
-        if (debug) {
-            std::cout << "Relaxed edge (" << fromVertex << " -> " << toVertex << ") with new distance " << newDistance << std::endl;
-        }
-    }
-}
 
 const std::vector<double>& DeltaSteppingParallel2::getDistances() const {
     return distances;
