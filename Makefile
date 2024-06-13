@@ -1,11 +1,11 @@
 CXX = g++
-CXXFLAGS = -pthread -std=c++11 -Wall -pg
+CXXFLAGS = -pthread -std=c++11 -Wall -pg -O3
 
 # Executable name
 EXECUTABLE = output_program
 
 # Source files
-SOURCES = main.cpp DeltaSteppingSequential.cpp DeltaSteppingParallel.cpp Dijkstra.cpp DeltaSteppingParallel2.cpp
+SOURCES = main.cpp DeltaSteppingSequential.cpp DeltaSteppingParallel.cpp Dijkstra.cpp DeltaSteppingParallel2.cpp DeltaSteppingParallel3.cpp
 
 # Object files
 OBJECTS = $(SOURCES:.cpp=.o)

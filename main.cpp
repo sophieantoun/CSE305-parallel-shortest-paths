@@ -12,6 +12,7 @@
 #include "dijkstra.h"
 #include "DeltaSteppingSequential.h"
 #include "DeltaSteppingParallel.h"
+#include "DeltaSteppingParallel3.h"
 #include "DeltaSteppingParallel2.h"
 #include "ThreadPool.h"
 
@@ -211,11 +212,25 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
         // outFile << "Threads: " << threads << "\n";
         // outFile << "Time: " << duration << " ms\n\n";
 
+
         // Version 2
+        // startTime = std::chrono::high_resolution_clock::now();
+        // DeltaSteppingParallel2 deltaSteppingParallel2(graph, 0, delta, false, threads);
+        // deltaSteppingParallel2.run();
+        // parallelDeltaSteppingDistances2 = deltaStproeppingParallel2.getDistances();
+        // endTime = std::chrono::high_resolution_clock::now();
+        // duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        // std::cout << "Parallel Delta Stepping algorithm (version 2) with " << threads << " threads took " << duration << " ms." << std::endl;
+        // outFile << "Algorithm: Parallel Delta Stepping (version 2)\n";
+        // outFile << "Threads: " << threads << "\n";
+        // outFile << "Time: " << duration << " ms\n\n";
+
+        // Version 3
+        std::vector<double> parallelDeltaSteppingDistances3;
         startTime = std::chrono::high_resolution_clock::now();
-        DeltaSteppingParallel2 deltaSteppingParallel2(graph, 0, delta, false, threads);
-        deltaSteppingParallel2.run();
-        parallelDeltaSteppingDistances2 = deltaSteppingParallel2.getDistances();
+        DeltaSteppingParallel3 deltaSteppingParallel3(graph, 0, delta, false, threads);
+        deltaSteppingParallel3.run();
+        parallelDeltaSteppingDistances3 = deltaSteppingParallel3.getDistances();
         endTime = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
         std::cout << "Parallel Delta Stepping algorithm (version 2) with " << threads << " threads took " << duration << " ms." << std::endl;
@@ -274,3 +289,28 @@ int main() {
     }
     return 0;
 }
+
+
+// void testSimpleGraph() {
+//     Graph graph(4);
+//     graph.addEdge(0, 1, 1);
+//     graph.addEdge(1, 2, 1);
+//     graph.addEdge(2, 3, 1);
+//     graph.addEdge(0, 3, 10);
+
+//     DeltaSteppingParallel3 deltaStepping(graph, 0, 1.0, true, 4);
+//     deltaStepping.run();
+//     const std::vector<double>& distances = deltaStepping.getDistances();
+
+//     for (size_t i = 0; i < distances.size(); ++i) {
+//         std::cout << "Distance to vertex " << i << " is " << distances[i] << std::endl;
+//     }
+
+//     assert(distances[3] == 3); // Check if the distance is as expected
+// }
+
+
+// int main() {
+//     testSimpleGraph();
+//     return 0;
+// }
