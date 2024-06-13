@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -pthread -std=c++11 -Wall -pg
+CXXFLAGS = -pthread -std=c++11 -Wall -pg -o3
 
 # Executable name
 EXECUTABLE = output_program

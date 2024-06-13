@@ -176,7 +176,7 @@ Graph createGridGraph(int gridSize, double edgeProbability) {
     }
     return graph;
 }
-Graph createDenseGraph(int numVertices, double minWeight, double maxWeight, double edgeProbability = 0.9) {
+Graph createDenseGraph(int numVertices, double minWeight, double maxWeight, double edgeProbability = 0.1) {
     Graph graph(numVertices);
     std::srand(std::time(nullptr)); 
     for (int u = 0; u < numVertices; ++u) {
@@ -263,7 +263,7 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
     outFile << "Time: " << duration << " ms\n\n";
 
     // Benchmark Parallel Delta Stepping algorithm with different thread counts
-    for (int threads = 2; threads <= maxNumThreads; threads += 2) {
+    for (int threads = 2; threads <= maxNumThreads; threads += 4) {
         std::cout << "Running Parallel Delta Stepping algorithm with " << threads << " threads" << std::endl;
 
         // Version 1
@@ -321,10 +321,10 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
 
 int main() {
     // Define parameters for benchmarks
-    std::vector<int> nodeCounts = {1000, 5000, 10000};
-    std::vector<std::string> graphTypes = {"dense", "random", "grid"};
-    std::vector<std::pair<double, double>> weightRanges = {{1, 5}, {1, 10}, {1, 100}};
-    std::vector<double> deltas = {0.5, 1, 3, 5};
+    std::vector<int> nodeCounts = {2000, 10000};
+    std::vector<std::string> graphTypes = {"dense", "random"};
+    std::vector<std::pair<double, double>> weightRanges = {{1, 10}};
+    std::vector<double> deltas = {3};
     
     for (int numVertices : nodeCounts) {
         for (const std::string& graphType : graphTypes) {
@@ -333,7 +333,7 @@ int main() {
                     double minWeight = weightRange.first;
                     double maxWeight = weightRange.second;
                     int numEdges = numVertices * 5;
-                    runBenchmarks(numVertices, graphType, delta, 16, numEdges, minWeight, maxWeight);
+                    runBenchmarks(numVertices, graphType, delta, 24, numEdges, minWeight, maxWeight);
                 }
             }
         }
