@@ -39,6 +39,7 @@ void DeltaSteppingParallel3::classifyEdges() {
 
 void DeltaSteppingParallel3::run() {
     while (bucketIndex < buckets.size()) {
+        std::cout << "Current bucket index: " << bucketIndex << ", Size: " << buckets[bucketIndex].vertices.size() << std::endl;
         processEdges(true);  
         processEdges(false); 
         ++bucketIndex;
@@ -47,6 +48,7 @@ void DeltaSteppingParallel3::run() {
         }
     }
 }
+
 
 void DeltaSteppingParallel3::processEdges(bool isLight) {
     std::vector<std::pair<int, double>> edges;

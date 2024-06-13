@@ -148,6 +148,32 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
     return graph;
 }
 
+        // Version 1
+        // startTime = std::chrono::high_resolution_clock::now();
+        // DeltaSteppingParallel deltaSteppingParallel(graph, 0, delta, false, threads);
+        // deltaSteppingParallel.run();
+        // parallelDeltaSteppingDistances1 = deltaSteppingParallel.getDistances();
+        // endTime = std::chrono::high_resolution_clock::now();
+        // duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        // std::cout << "Parallel Delta Stepping algorithm (version 1) with " << threads << " threads took " << duration << " ms." << std::endl;
+        // outFile << "Algorithm: Parallel Delta Stepping (version 1)\n";
+        // outFile << "Threads: " << threads << "\n";
+        // outFile << "Time: " << duration << " ms\n\n";
+
+
+        // Version 2
+        // startTime = std::chrono::high_resolution_clock::now();
+        // DeltaSteppingParallel2 deltaSteppingParallel2(graph, 0, delta, false, threads);
+        // deltaSteppingParallel2.run();
+        // parallelDeltaSteppingDistances2 = deltaStproeppingParallel2.getDistances();
+        // endTime = std::chrono::high_resolution_clock::now();
+        // duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        // std::cout << "Parallel Delta Stepping algorithm (version 2) with " << threads << " threads took " << duration << " ms." << std::endl;
+        // outFile << "Algorithm: Parallel Delta Stepping (version 2)\n";
+        // outFile << "Threads: " << threads << "\n";
+        // outFile << "Time: " << duration << " ms\n\n";
+
+
 void runBenchmarks(int numVertices, const std::string& graphType, double delta, int maxNumThreads, int numEdges, double minWeight, double maxWeight) {
     Graph graph(numVertices);
     if (graphType == "random") {
@@ -161,7 +187,7 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
         return;
     }
 
-    std::vector<double> dijkstraDistances, deltaSteppingDistances, parallelDeltaSteppingDistances1, parallelDeltaSteppingDistances2;
+    std::vector<double> dijkstraDistances, deltaSteppingDistances, parallelDeltaSteppingDistances3;
 
     // Print graph details
     std::cout << "Running on graph: " << graphType << " with " << numVertices << " vertices and weights in range [" << minWeight << ", " << maxWeight << "]" << std::endl;
@@ -200,41 +226,15 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
     for (int threads = 2; threads <= maxNumThreads; threads += 2) {
         std::cout << "Running Parallel Delta Stepping algorithm with " << threads << " threads" << std::endl;
 
-        // Version 1
-        // startTime = std::chrono::high_resolution_clock::now();
-        // DeltaSteppingParallel deltaSteppingParallel(graph, 0, delta, false, threads);
-        // deltaSteppingParallel.run();
-        // parallelDeltaSteppingDistances1 = deltaSteppingParallel.getDistances();
-        // endTime = std::chrono::high_resolution_clock::now();
-        // duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        // std::cout << "Parallel Delta Stepping algorithm (version 1) with " << threads << " threads took " << duration << " ms." << std::endl;
-        // outFile << "Algorithm: Parallel Delta Stepping (version 1)\n";
-        // outFile << "Threads: " << threads << "\n";
-        // outFile << "Time: " << duration << " ms\n\n";
-
-
-        // Version 2
-        // startTime = std::chrono::high_resolution_clock::now();
-        // DeltaSteppingParallel2 deltaSteppingParallel2(graph, 0, delta, false, threads);
-        // deltaSteppingParallel2.run();
-        // parallelDeltaSteppingDistances2 = deltaStproeppingParallel2.getDistances();
-        // endTime = std::chrono::high_resolution_clock::now();
-        // duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        // std::cout << "Parallel Delta Stepping algorithm (version 2) with " << threads << " threads took " << duration << " ms." << std::endl;
-        // outFile << "Algorithm: Parallel Delta Stepping (version 2)\n";
-        // outFile << "Threads: " << threads << "\n";
-        // outFile << "Time: " << duration << " ms\n\n";
-
         // Version 3
-        std::vector<double> parallelDeltaSteppingDistances3;
         startTime = std::chrono::high_resolution_clock::now();
-        DeltaSteppingParallel3 deltaSteppingParallel3(graph, 0, delta, false, threads);
-        deltaSteppingParallel3.run();
-        parallelDeltaSteppingDistances3 = deltaSteppingParallel3.getDistances();
+        std::unique_ptr<DeltaSteppingParallel3> deltaSteppingParallel3(new DeltaSteppingParallel3(graph, 0, delta, false, threads));
+        deltaSteppingParallel3->run();
+        parallelDeltaSteppingDistances3 = deltaSteppingParallel3->getDistances();
         endTime = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        std::cout << "Parallel Delta Stepping algorithm (version 2) with " << threads << " threads took " << duration << " ms." << std::endl;
-        outFile << "Algorithm: Parallel Delta Stepping (version 2)\n";
+        std::cout << "Parallel Delta Stepping algorithm (version 3) with " << threads << " threads took " << duration << " ms." << std::endl;
+        outFile << "Algorithm: Parallel Delta Stepping (version 3)\n";
         outFile << "Threads: " << threads << "\n";
         outFile << "Time: " << duration << " ms\n\n";
 
@@ -245,12 +245,8 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
                 outFile << "Mismatch at vertex " << i << ": Delta Stepping = " << deltaSteppingDistances[i] << ", Dijkstra = " << dijkstraDistances[i] << "\n";
                 isCorrect = false;
             }
-            // if (parallelDeltaSteppingDistances1[i] != dijkstraDistances[i]) {
-            //     outFile << "Mismatch at vertex " << i << ": Parallel Delta Stepping 1 = " << parallelDeltaSteppingDistances1[i] << ", Dijkstra = " << dijkstraDistances[i] << "\n";
-            //     isCorrect = false;
-            // }
-            if (parallelDeltaSteppingDistances2[i] != dijkstraDistances[i]) {
-                outFile << "Mismatch at vertex " << i << ": Parallel Delta Stepping 2 = " << parallelDeltaSteppingDistances2[i] << ", Dijkstra = " << dijkstraDistances[i] << "\n";
+            if (parallelDeltaSteppingDistances3[i] != dijkstraDistances[i]) {
+                outFile << "Mismatch at vertex " << i << ": Parallel Delta Stepping 3 = " << parallelDeltaSteppingDistances3[i] << ", Dijkstra = " << dijkstraDistances[i] << "\n";
                 isCorrect = false;
             }
         }
@@ -268,25 +264,29 @@ void runBenchmarks(int numVertices, const std::string& graphType, double delta, 
 }
 
 int main() {
-    // Define parameters for benchmarks
-    std::vector<int> nodeCounts = {1000, 5000, 10000};
-    std::vector<std::string> graphTypes = {"dense", "random", "grid"};
-    std::vector<std::pair<double, double>> weightRanges = {{1, 5}, {1, 10}, {1, 100}};
-    std::vector<double> deltas = {0.5, 1, 3, 5};
-    
-    for (int numVertices : nodeCounts) {
-        for (const std::string& graphType : graphTypes) {
-            for (const auto& weightRange : weightRanges) {
-                for (double delta: deltas){
-                    double minWeight = weightRange.first;
-                    double maxWeight = weightRange.second;
-                    int numEdges = numVertices * 5;
-                    runBenchmarks(numVertices, graphType, delta, 16, numEdges, minWeight, maxWeight);
+    try {
+        // Define parameters for benchmarks
+        std::vector<int> nodeCounts = {1000, 5000, 10000};
+        std::vector<std::string> graphTypes = {"dense", "random", "grid"};
+        std::vector<std::pair<double, double>> weightRanges = {{1, 5}, {1, 10}, {1, 100}};
+        std::vector<double> deltas = {0.5, 1, 3, 5};
+        
+        for (int numVertices : nodeCounts) {
+            for (const std::string& graphType : graphTypes) {
+                for (const auto& weightRange : weightRanges) {
+                    for (double delta : deltas) {
+                        double minWeight = weightRange.first;
+                        double maxWeight = weightRange.second;
+                        int numEdges = numVertices * 5;
+                        runBenchmarks(numVertices, graphType, delta, 16, numEdges, minWeight, maxWeight);
+                    }
                 }
             }
         }
-    
+    } catch (const std::exception& e) {
+        std::cerr << "An exception occurred: " << e.what() << std::endl;
     }
+
     return 0;
 }
 
