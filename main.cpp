@@ -148,6 +148,7 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
     return graph;
 }
 
+
         // Version 1
         // startTime = std::chrono::high_resolution_clock::now();
         // DeltaSteppingParallel deltaSteppingParallel(graph, 0, delta, false, threads);
@@ -172,8 +173,6 @@ Graph loadGraphFromFile(int numVertices, const std::string& filename) {
         // outFile << "Algorithm: Parallel Delta Stepping (version 2)\n";
         // outFile << "Threads: " << threads << "\n";
         // outFile << "Time: " << duration << " ms\n\n";
-
-
 void runBenchmarks(int numVertices, const std::string& graphType, double delta, int maxNumThreads, int numEdges, double minWeight, double maxWeight) {
     Graph graph(numVertices);
     if (graphType == "random") {
@@ -289,6 +288,7 @@ int main() {
 
     return 0;
 }
+
 
 
 // void testSimpleGraph() {
