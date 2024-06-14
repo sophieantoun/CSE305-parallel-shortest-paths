@@ -18,11 +18,6 @@ DeltaSteppingParallel2::DeltaSteppingParallel2(const Graph& graph, int source, d
     predecessors[source] = source;
     buckets[0].vertices.insert(source);
     
-
-    if (debug) {
-        std::cout << "Number of buckets: " << buckets.size() << std::endl;
-        printBuckets();
-    }
 }
 
 void DeltaSteppingParallel2::classifyEdges() {
@@ -188,12 +183,3 @@ const std::vector<double>& DeltaSteppingParallel2::getDistances() const {
     return distances;
 }
 
-void DeltaSteppingParallel2::printBuckets() const {
-    for (size_t bucketId = 0; bucketId < buckets.size(); ++bucketId) {
-        std::cout << "Bucket [" << bucketId << "], size " << buckets[bucketId].vertices.size() << ": ";
-        for (int vertex : buckets[bucketId].vertices) {
-            std::cout << vertex << " ";
-        }
-        std::cout << std::endl;
-    }
-}

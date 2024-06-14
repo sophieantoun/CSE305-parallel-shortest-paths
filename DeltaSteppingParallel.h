@@ -21,7 +21,6 @@ private:
     void classifyEdges();
     void processBucket(int threadId);
     void relaxEdge(const GraphEdge& edge);
-    void printBuckets() const;
 
     const Graph& graph;
     int source;
