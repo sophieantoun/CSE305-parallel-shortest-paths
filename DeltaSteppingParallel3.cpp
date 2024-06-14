@@ -37,51 +37,96 @@ void DeltaSteppingParallel3::classifyEdges() {
     }
 }
 
+
 void DeltaSteppingParallel3::run() {
     while (bucketIndex < buckets.size()) {
-        std::cout << "Current bucket index: " << bucketIndex << ", Size: " << buckets[bucketIndex].vertices.size() << std::endl;
+       // std::cout << "Running bucket index: " << bucketIndex << ", Vertex count: " << buckets[bucketIndex].vertices.size() << std::endl;
         processEdges(true);  
-        processEdges(false); 
+      //  std::cout << "First Process Edge" << std::endl;
+        processEdges(false);
         ++bucketIndex;
+       // std::cout << "Second" << std::endl;
         while (bucketIndex < buckets.size() && buckets[bucketIndex].vertices.empty()) {
             ++bucketIndex;
+       //     std::cout << "Skipping empty bucket index: " << bucketIndex << std::endl;
         }
     }
+   // std::cout << "Exiting run loop." << std::endl;
 }
 
 
 void DeltaSteppingParallel3::processEdges(bool isLight) {
+    //std::cout << "Processing edges, isLight: " << isLight << ", Bucket Index: " << bucketIndex << std::endl;
     std::vector<std::pair<int, double>> edges;
     {
-        std::lock_guard<std::mutex> lock(bucketMutex); 
+        // std::lock_guard<std::mutex> lock(bucketMutex);
+      //  std::cout << "Collecting edges... Total vertices in bucket: " << buckets[bucketIndex].vertices.size() << std::endl;
         collectEdges(edges, isLight);
     }
 
-    int threads = std::min(numThreads, static_cast<int>(edges.size()));
-    if (threads == 0) threads = 1;  
+    if (edges.empty()) {
+        //std::cout << "No edges to process, exiting." << std::endl;
+        return;
+    }
 
+    int threads = std::min(numThreads, static_cast<int>(edges.size()));
+    //std::cout << "Using " << threads << " threads." << std::endl;
     int blockSize = edges.size() / threads;
+    std::vector<std::thread> threadsVector;
+
     for (int i = 0; i < threads; ++i) {
         int start = i * blockSize;
         int end = (i + 1 < threads) ? (i + 1) * blockSize : edges.size();
-        pool.enqueue([this, start, end, edges]() { // Note: Passing edges by value to avoid access to shared data
+        threadsVector.emplace_back([this, start, end, &edges]() {
             this->relaxEdges(std::vector<std::pair<int, double>>(edges.begin() + start, edges.begin() + end));
         });
     }
+
+    for (auto& th : threadsVector) {
+        th.join();
+    }
+    //std::cout << "Finished processing edges." << std::endl;
 }
 
 
 void DeltaSteppingParallel3::collectEdges(std::vector<std::pair<int, double>>& edges, bool isLight) {
-    std::lock_guard<std::mutex> lock(bucketMutex);
-    for (int vertex : buckets[bucketIndex].vertices) {
-        const auto& edgeList = isLight ? lightEdges[vertex] : heavyEdges[vertex];
+   //std::cout << "Starting to collect edges. Is light: " << isLight << std::endl;
+    std::vector<int> localVertices;
+
+    // Manual locking and unlocking for more control over mutex handling
+    //std::cout << "Attempting to lock bucketMutex..." << std::endl;
+    bucketMutex.lock();
+    //std::cout << "bucketMutex locked." << std::endl;
+    localVertices.assign(buckets[bucketIndex].vertices.begin(), buckets[bucketIndex].vertices.end());
+    bucketMutex.unlock();
+    //std::cout << "bucketMutex unlocked. Collected " << localVertices.size() << " vertices from bucket index " << bucketIndex << std::endl;
+
+    // Immediately check for entrance into vertex loop
+    //std::cout << "Checking if we are entering the vertex processing loop..." << std::endl;
+
+    for (int vertex : localVertices) {
+       // std::cout << "Processing vertex " << vertex << std::endl;
+        std::vector<std::pair<int, double>> tempEdges;
+        std::vector<int> edgeList;
+
+        // Lock just before accessing shared edge lists
+        bucketMutex.lock();
+        edgeList = isLight ? lightEdges[vertex] : heavyEdges[vertex];
+        bucketMutex.unlock();
+
+       // std::cout << "Vertex " << vertex << " has " << edgeList.size() << " edges." << std::endl;
+
         for (int neighbor : edgeList) {
             double weight = graph.getEdgeWeight(vertex, neighbor);
-            edges.emplace_back(neighbor, distances[vertex] + weight);
+            tempEdges.emplace_back(neighbor, distances[vertex] + weight);
+          //  std::cout << "Processed edge from " << vertex << " to " << neighbor << " with weight " << weight << std::endl;
         }
-    }
-}
 
+        edges.insert(edges.end(), tempEdges.begin(), tempEdges.end());
+    }
+
+//    std::cout << "Finished collecting edges. Total edges collected: " << edges.size() << std::endl;
+}
 
 void DeltaSteppingParallel3::relaxSingleEdge(const GraphEdge& edge) {
     int fromVertex = edge.getSource();
@@ -140,45 +185,34 @@ void DeltaSteppingParallel3::relaxEdges(const std::vector<std::pair<int, double>
 }
 
 
-
+// Example to reduce lock scope and ensure lock release
 void DeltaSteppingParallel3::processBucket(int threadId) {
-    std::vector<int> currentBucket;
-    {
-        std::lock_guard<std::mutex> lock(buckets[bucketIndex].mutex);
-        currentBucket.assign(buckets[bucketIndex].vertices.begin(), buckets[bucketIndex].vertices.end());
-    }
+    while (true) {
+        std::vector<int> currentBucket;
+        {
+            std::lock_guard<std::mutex> lock(bucketMutex);
+            if (buckets[bucketIndex].vertices.empty()) break;
+            currentBucket.assign(buckets[bucketIndex].vertices.begin(), buckets[bucketIndex].vertices.end());
+            buckets[bucketIndex].vertices.clear(); // Clear once copied
+        }
 
-    while (!currentBucket.empty()) {
-        std::vector<GraphEdge> lightRequests;
-        std::vector<GraphEdge> heavyRequests;
-        
-        for (size_t i = 0; i < currentBucket.size(); ++i) {
-            int vertex = currentBucket[i];
-            {
-                std::lock_guard<std::mutex> lock(buckets[bucketIndex].mutex);
-                buckets[bucketIndex].vertices.erase(vertex);
-            }
-
+        std::vector<GraphEdge> lightRequests, heavyRequests;
+        for (int vertex : currentBucket) {
+            // Assuming lightEdges and heavyEdges are not modified by other threads at this point
             for (int lightEdge : lightEdges[vertex]) {
                 lightRequests.emplace_back(vertex, lightEdge, graph.getEdgeWeight(vertex, lightEdge));
             }
-
             for (int heavyEdge : heavyEdges[vertex]) {
                 heavyRequests.emplace_back(vertex, heavyEdge, graph.getEdgeWeight(vertex, heavyEdge));
             }
         }
 
+        // Process requests outside the lock
         for (const GraphEdge& edge : lightRequests) {
-            relaxSingleEdge(edge);  
+            relaxSingleEdge(edge);
         }
-
-        {
-            std::lock_guard<std::mutex> lock(buckets[bucketIndex].mutex);
-            currentBucket.assign(buckets[bucketIndex].vertices.begin(), buckets[bucketIndex].vertices.end());
-        }
-
         for (const GraphEdge& edge : heavyRequests) {
-            relaxSingleEdge(edge);  
+            relaxSingleEdge(edge);
         }
     }
 }
@@ -198,3 +232,4 @@ void DeltaSteppingParallel3::printBuckets() const {
         std::cout << std::endl;
     }
 }
+
