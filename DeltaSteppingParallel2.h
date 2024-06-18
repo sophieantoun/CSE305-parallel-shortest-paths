@@ -20,7 +20,6 @@ public:
     DeltaSteppingParallel2(const Graph& graph, int source, double delta, bool debug, int numThreads);
     void run();
     const std::vector<double>& getDistances() const;
-    void printBuckets() const;
 
 private:
     const Graph& graph;

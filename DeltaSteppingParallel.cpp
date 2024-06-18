@@ -18,10 +18,6 @@ DeltaSteppingParallel::DeltaSteppingParallel(const Graph& graph, int source, dou
     distances[source] = 0;
     predecessors[source] = source;
 
-    if (debug) {
-        std::cout << "Number of buckets: " << buckets.size() << std::endl;
-        printBuckets();
-    }
 }
 
 void DeltaSteppingParallel::classifyEdges() {
@@ -125,14 +121,4 @@ void DeltaSteppingParallel::relaxEdge(const GraphEdge& edge) {
 
 const std::vector<double>& DeltaSteppingParallel::getDistances() const {
     return distances;
-}
-
-void DeltaSteppingParallel::printBuckets() const {
-    for (size_t bucketId = 0; bucketId < buckets.size(); ++bucketId) {
-        std::cout << "Bucket [" << bucketId << "], size " << buckets[bucketId].size() << ": ";
-        for (int vertex : buckets[bucketId]) {
-            std::cout << vertex << " ";
-        }
-        std::cout << std::endl;
-    }
 }
