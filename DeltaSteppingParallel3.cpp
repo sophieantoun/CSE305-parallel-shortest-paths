@@ -56,37 +56,35 @@ void DeltaSteppingParallel3::run() {
 
 
 void DeltaSteppingParallel3::processEdges(bool isLight) {
-    //std::cout << "Processing edges, isLight: " << isLight << ", Bucket Index: " << bucketIndex << std::endl;
     std::vector<std::pair<int, double>> edges;
     {
-        // std::lock_guard<std::mutex> lock(bucketMutex);
-      //  std::cout << "Collecting edges... Total vertices in bucket: " << buckets[bucketIndex].vertices.size() << std::endl;
         collectEdges(edges, isLight);
     }
 
     if (edges.empty()) {
-        //std::cout << "No edges to process, exiting." << std::endl;
         return;
     }
 
     int threads = std::min(numThreads, static_cast<int>(edges.size()));
-    //std::cout << "Using " << threads << " threads." << std::endl;
     int blockSize = edges.size() / threads;
-    std::vector<std::thread> threadsVector;
+    std::vector<std::future<void>> futures;
 
     for (int i = 0; i < threads; ++i) {
         int start = i * blockSize;
         int end = (i + 1 < threads) ? (i + 1) * blockSize : edges.size();
-        threadsVector.emplace_back([this, start, end, &edges]() {
+        
+        // Enqueue tasks to the thread pool and store the futures
+        futures.push_back(pool.enqueue([this, start, end, &edges]() {
             this->relaxEdges(std::vector<std::pair<int, double>>(edges.begin() + start, edges.begin() + end));
-        });
+        }));
     }
 
-    for (auto& th : threadsVector) {
-        th.join();
+    // Wait for all tasks to complete
+    for (auto &future : futures) {
+        future.get();
     }
-    //std::cout << "Finished processing edges." << std::endl;
 }
+
 
 
 void DeltaSteppingParallel3::collectEdges(std::vector<std::pair<int, double>>& edges, bool isLight) {
